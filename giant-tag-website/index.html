@@ -231,6 +231,7 @@ a { color: var(--player); }
 @keyframes ping { from { transform: scale(.8); opacity: 1; } to { transform: scale(2.6); opacity: 0; } }
 .pm.ping-fade { animation: pingfade 10s linear forwards; }
 @keyframes pingfade { 0%, 55% { opacity: 1; } 100% { opacity: 0; } }
+.tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.5); }
 
 </style>
 <script src="config.js"></script>
@@ -278,7 +279,12 @@ function createStore(init) {
 }
 function useStore(store) {
   const [, force] = useState(0);
-  useEffect(() => store.sub(() => force((x) => x + 1)), [store]);
+  const seen = store.get();
+  useEffect(() => {
+    const unsub = store.sub(() => force((x) => x + 1));
+    if (store.get() !== seen) force((x) => x + 1); // changed before we subscribed
+    return unsub;
+  }, [store]);
   return store.get();
 }
 
@@ -321,13 +327,18 @@ async function loadProfile() {
   authStore.set({ profile: data || null });
   return data;
 }
+// Realtime must carry the player's login, or row-level security filters out every live update.
+const syncRealtimeAuth = (session) => { try { supabase.realtime.setAuth(session?.access_token || null); } catch {} };
+window.__gt = { supabase };
 if (isConfigured) {
   supabase.auth.getSession().then(async ({ data }) => {
+    syncRealtimeAuth(data.session);
     authStore.set({ session: data.session });
     await loadProfile();
     authStore.set({ loading: false });
   });
   supabase.auth.onAuthStateChange((_e, session) => {
+    syncRealtimeAuth(session);
     const prev = authStore.get().session?.user?.id;
     authStore.set({ session });
     if (session?.user?.id !== prev) loadProfile();
@@ -646,9 +657,9 @@ function useLocationSharing(gameId, enabled) {
 
 // ---------------------------------------------------------------- Leaflet helpers
 const TILES = {
-  dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr: '© OpenStreetMap © CARTO', sub: 'abcd' },
-  streets: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attr: '© OpenStreetMap © CARTO', sub: 'abcd' },
-  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Imagery © Esri', sub: '' },
+  dark: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '© OpenStreetMap contributors', cls: 'tiles-dark' },
+  streets: { url: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', attr: '© OpenStreetMap contributors' },
+  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Imagery © Esri' },
 };
 /** Create a Leaflet map in a div ref; returns the map once ready. Tile layer follows prefs.mapType. */
 function useLeafletMap(ref, { center, zoom = 15, bounds, interactive = true } = {}) {
@@ -670,7 +681,7 @@ function useLeafletMap(ref, { center, zoom = 15, bounds, interactive = true } = 
     if (!map) return;
     const t = TILES[prefs.mapType] || TILES.dark;
     tiles.current?.remove();
-    tiles.current = L.tileLayer(t.url, { attribution: t.attr, subdomains: t.sub || 'abc', maxZoom: 20, detectRetina: true }).addTo(map);
+    tiles.current = L.tileLayer(t.url, { attribution: t.attr, maxZoom: 19, className: t.cls || '' }).addTo(map);
   }, [map, prefs.mapType]);
   return map;
 }
