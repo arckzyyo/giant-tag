@@ -514,6 +514,7 @@ function useGame(gameId, onEvent) {
   const onEventRef = useRef(onEvent); onEventRef.current = onEvent;
   const seen = useRef(new Set());
   const once = useRef(false);
+  const [attempt, setAttempt] = useState(0);
 
   const loadPlayers = useCallback(async () => {
     const { data } = await supabase.from('game_players').select('*, profile:profiles(*)').eq('game_id', gameId).order('joined_at');
@@ -552,13 +553,19 @@ function useGame(gameId, onEvent) {
   useEffect(() => {
     if (!gameId) return;
     reload();
+    let retryTimer = null;
     const filter = `game_id=eq.${gameId}`;
     const ch = supabase.channel(`game:${gameId}:${Math.random().toString(36).slice(2, 7)}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `id=eq.${gameId}` },
-        (p) => p.new && p.new.id && set({ game: p.new }))
+        (p) => {
+          if (!p.new?.id) return;
+          // Large unchanged columns (e.g. the boundary) can be left out of live updates, so merge instead of replace
+          const patch = Object.fromEntries(Object.entries(p.new).filter(([, v]) => v !== undefined));
+          set((s) => ({ game: { ...(s.game || {}), ...patch } }));
+        })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_players', filter }, loadPlayers)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_players', filter }, (p) =>
-        set((s) => ({ players: s.players.map((x) => (x.id === p.new.id ? { ...p.new, profile: x.profile } : x)) })))
+        set((s) => ({ players: s.players.map((x) => (x.id === p.new.id ? { ...x, ...Object.fromEntries(Object.entries(p.new).filter(([, v]) => v !== undefined)), profile: x.profile } : x)) })))
       .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'game_players' }, loadPlayers)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'player_locations', filter }, (p) =>
         set((s) => ({ locations: { ...s.locations, [p.new.user_id]: p.new } })))
@@ -578,13 +585,19 @@ function useGame(gameId, onEvent) {
       })
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') { set({ connected: true }); if (once.current) reload(); once.current = true; }
-        else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) set({ connected: false });
+        else if (['CHANNEL_ERROR', 'TIMED_OUT'].includes(status)) {
+          set({ connected: false });
+          // rebuild the channel after a moment (also resyncs everything once it's back)
+          if (!retryTimer) retryTimer = setTimeout(() => { once.current = true; setAttempt((a) => a + 1); }, 2000);
+        } else if (status === 'CLOSED') set({ connected: false });
       });
+    // While disconnected, poll so the game keeps working
+    const poll = setInterval(() => { if (!ch.isJoined?.() && ch.state !== 'joined') reload(); }, 6000);
     const vis = () => document.visibilityState === 'visible' && reload();
     document.addEventListener('visibilitychange', vis);
     window.addEventListener('online', reload);
-    return () => { document.removeEventListener('visibilitychange', vis); window.removeEventListener('online', reload); supabase.removeChannel(ch); };
-  }, [gameId]);
+    return () => { clearTimeout(retryTimer); clearInterval(poll); document.removeEventListener('visibilitychange', vis); window.removeEventListener('online', reload); supabase.removeChannel(ch); };
+  }, [gameId, attempt]);
 
   // New IT ping → fetch the snapshot (no notification, the map just updates)
   useEffect(() => { if (gameId && st.game?.last_ping_at) loadPings(); }, [st.game?.last_ping_at]);
@@ -1365,7 +1378,7 @@ function Lobby({ id }) {
   const accept = () => {
     setConsent(false);
     navigator.geolocation.getCurrentPosition(
-      () => run('ready', () => rpc('set_ready', { g: game.id, ready: true, location_consent: true })),
+      () => run(isHost ? 'start' : 'ready', () => isHost ? rpc('start_game', { g: game.id }) : rpc('set_ready', { g: game.id, ready: true, location_consent: true })),
       () => toast({ title: 'Location is blocked', body: 'iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using.', tone: 'danger' }),
       { enableHighAccuracy: true, timeout: 15000 });
   };
@@ -1417,7 +1430,7 @@ function Lobby({ id }) {
         title=${me.is_ready ? "I'M NOT READY" : "I'M READY"} loading=${busy === 'ready'} onClick=${toggleReady} />`}
       ${isHost && html`
         <${Button} big variant="it" icon="▶" title="START GAME" disabled=${!canStart} loading=${busy === 'start'}
-          onClick=${() => { if (!me.consented_at && !confirm('Start the game? Your location will be shared with the players in this game until it ends.')) return; run('start', () => rpc('start_game', { g: game.id })); }} />
+          onClick=${() => (me.consented_at ? run('start', () => rpc('start_game', { g: game.id })) : setConsent(true))} />
         ${!canStart && html`<p class="small" style="text-align:center">${players.length < 2 ? 'Waiting for at least one more player…' : game.boundary.length < 3 ? 'Draw a boundary first (Edit).' : 'Waiting for everyone to be ready…'}</p>`}`}
       ${me?.role === 'spectator' && html`<p class="muted" style="text-align:center">You're spectating. Sit tight until the host starts.</p>`}
     </div>
@@ -1431,7 +1444,7 @@ function Lobby({ id }) {
         • A green LIVE badge shows whenever you're sharing.<br/>
         • Keep GIANT TAG open on screen during the game. Your phone can't share location while locked.
       </div>
-      <${Button} variant="success" title="I agree, I'm ready" onClick=${accept} style="margin-top:18px" />
+      <${Button} variant="success" title=${isHost ? 'I agree, start the game' : "I agree, I'm ready"} onClick=${accept} style="margin-top:18px" />
       <${Button} variant="ghost" title="Not now" onClick=${() => setConsent(false)} style="margin-top:6px" />
     <//>
     <${Sheet} open=${!!menuFor} onClose=${() => setMenuFor(null)} title=${menuFor?.profile?.username}>
