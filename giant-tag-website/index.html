@@ -365,7 +365,7 @@ const C = {
 
 const DEFAULT_SETTINGS = {
   name: '', mode: 'classic', location_name: null, boundary: [], safe_zones: [], max_radius_m: null,
-  max_players: 20, duration_seconds: 1800, countdown_seconds: 60, starting_it_id: null, tag_radius_m: 25,
+  max_players: 20, duration_seconds: 1800, countdown_seconds: 60, starting_it_id: null, tag_radius_m: 10,
   tag_back_cooldown_seconds: 60, tag_confirm_timeout_seconds: 60, escalation_interval_seconds: 300,
   out_of_bounds_action: 'become_it', grace_seconds: 20, speed_limit_mph: 18, speed_grace_seconds: 10, it_ping_seconds: 60,
   allow_rejoin: false, allow_spectators: true, location_retention_hours: 24,
@@ -1045,11 +1045,9 @@ function SettingsForm({ gameId }) {
 
     <${Section}>Tagging rules<//>
     <${Card}>
-      <${Stepper} label="Tag distance" value=${d.tag_radius_m} step=${5} min=${5} max=${200} format=${(v) => v + ' m'} onChange=${(v) => set({ tag_radius_m: v })} />
-      <div class="small">Phone GPS is only accurate to a few metres, so keep this at 15 m or more.</div>
+      <${Stepper} label="Auto-tag distance" value=${d.tag_radius_m} step=${1} min=${3} max=${50} format=${(v) => v + ' m'} onChange=${(v) => set({ tag_radius_m: v })} />
+      <div class="small">When IT gets this close to someone, they're tagged automatically, with no button and no confirming. Phone GPS is accurate to about 5 m outdoors, so 8–12 m works best.</div>
       ${d.mode === 'classic' && html`<${Stepper} label="No tag-backs for" value=${d.tag_back_cooldown_seconds} step=${15} min=${0} max=${600} format=${(v) => (v ? v + 's' : 'Off')} onChange=${(v) => set({ tag_back_cooldown_seconds: v })} />`}
-      <${Stepper} label="Time to confirm a tag" value=${d.tag_confirm_timeout_seconds} step=${10} min=${10} max=${600} format=${(v) => v + 's'} onChange=${(v) => set({ tag_confirm_timeout_seconds: v })} />
-      <div class="small">Unconfirmed tags go to the host to decide.</div>
     <//>
 
     <${Section}>No vehicles<//>
@@ -1416,7 +1414,7 @@ function Lobby({ id }) {
         ['Duration', formatDuration(game.duration_seconds)],
         ['Head start', game.countdown_seconds ? game.countdown_seconds + 's' : 'None'],
         game.mode !== 'team' && ['Starting IT', startingIt || 'Random'],
-        ['Tag distance', game.tag_radius_m + ' m'],
+        ['Auto-tag distance', game.tag_radius_m + ' m'],
         game.mode !== 'team' && ['IT ↔ runners', game.it_ping_seconds ? `Ping every ${game.it_ping_seconds >= 60 ? game.it_ping_seconds / 60 + ' min' : game.it_ping_seconds + 's'}` : 'Live'],
         ['Speed limit', game.speed_limit_mph ? `${game.speed_limit_mph} mph → become IT` : 'Off'],
         ['Out of bounds', `${OOB_LABEL[game.out_of_bounds_action]} after ${game.grace_seconds}s`],
@@ -1823,7 +1821,7 @@ function PlayView({ id, g }) {
     finally { setBusy(null); }
   };
   const requestTag = (t) => run('tag', async () => { await sharing.sendNow(); await rpc('request_tag', { g: game.id, target: t.user_id }); setTagOpen(false); setSelected(null); },
-    `Tag sent! Waiting for ${t.profile?.username} to confirm…`);
+    `Tagged ${t.profile?.username}!`);
   const recenter = () => myPos ? map.setView(toLL(myPos), 17) : map.fitBounds(L.latLngBounds(game.boundary.map(toLL)));
 
   let timer = formatClock(gameSecondsLeft(game, now));
@@ -1903,8 +1901,8 @@ function PlayView({ id, g }) {
     ${sel && html`<${PlayerCard} p=${sel} game=${game} now=${now} me=${me} myPos=${myPos} loc=${locOf(sel) && (locOf(sel).updated_at ? locOf(sel) : { ...locOf(sel), updated_at: locOf(sel).pinged_at })}
       busy=${busy === 'tag'} onTag=${() => requestTag(sel)} onClose=${() => setSelected(null)} />`}
 
-    <${Sheet} open=${tagOpen} onClose=${() => setTagOpen(false)} title="Who did you tag?">
-      <div class="small" style="margin-bottom:10px">${viaPing ? `Distances are from the last ping. Tag whoever you actually touched — the game checks real GPS (must be within ${game.tag_radius_m} m).` : `Players within ${game.tag_radius_m} m are highlighted.`} They'll be asked to confirm.</div>
+    <${Sheet} open=${tagOpen} onClose=${() => setTagOpen(false)} title="Tag someone">
+      <div class="small" style="margin-bottom:10px">Tags happen automatically when you get within ${game.tag_radius_m} m. If GPS is lagging, tap the person you just tagged. The game checks your real positions and tags them instantly.</div>
       ${candidates.length === 0 ? html`<div class="muted">No one you can tag right now.</div>` : candidates.map(({ p, d }) => {
         const loc = locOf(p);
         const allowed = game.tag_radius_m + Math.min((acc || 0) + (loc?.accuracy || 0), game.tag_radius_m);
