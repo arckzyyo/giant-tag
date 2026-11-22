@@ -1,0 +1,2039 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="theme-color" content="#121418" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="GIANT TAG" />
+<meta name="description" content="A real-life game of tag across your whole town." />
+<link rel="apple-touch-icon" href="icon-180.png" />
+<link rel="icon" href="icon-180.png" />
+<link rel="manifest" href="manifest.webmanifest" />
+<title>GIANT TAG</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<style>
+:root {
+  --bg: #121418; --bg-deep: #0b0c0f; --card: #1c1f26; --card2: #252a33; --border: #2e3440;
+  --text: #fff; --muted: #9aa3b2; --faint: #5b6474;
+  --it: #ff2d55; --it-glow: rgba(255,45,85,.35); --player: #3b82f6; --me: #22c55e; --gray: #6b7280;
+  --boundary: #facc15; --safe: #2dd4bf; --warning: #f59e0b; --danger: #ef4444; --success: #22c55e;
+  --st: env(safe-area-inset-top, 0px); --sb: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  overscroll-behavior: none; -webkit-font-smoothing: antialiased; }
+body { -webkit-user-select: none; user-select: none; }
+input, textarea { -webkit-user-select: text; user-select: text; }
+#app { min-height: 100%; }
+button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
+a { color: var(--player); }
+
+.screen { min-height: 100vh; min-height: 100dvh; padding: calc(var(--st) + 10px) 18px calc(var(--sb) + 28px); max-width: 560px; margin: 0 auto; }
+.full { position: fixed; inset: 0; overflow: hidden; }
+.center-col { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.row { display: flex; align-items: center; gap: 10px; }
+.grow { flex: 1; min-width: 0; }
+.gap8 { display: flex; flex-direction: column; gap: 8px; }
+.gap12 { display: flex; flex-direction: column; gap: 12px; }
+.mt8 { margin-top: 8px; } .mt12 { margin-top: 12px; } .mt16 { margin-top: 16px; } .mt24 { margin-top: 24px; }
+
+.h1 { font-size: 30px; font-weight: 900; font-style: italic; letter-spacing: .5px; margin: 0; }
+.h2 { font-size: 19px; font-weight: 800; margin: 0; }
+.muted { color: var(--muted); font-size: 14px; }
+.small { color: var(--faint); font-size: 12px; line-height: 1.4; }
+.bold { font-weight: 700; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.logo { display: flex; flex-direction: column; align-items: center; line-height: 1; font-weight: 900; font-style: italic; }
+.logo .a { font-size: 64px; text-shadow: 0 0 18px var(--player); }
+.logo .b { font-size: 80px; color: var(--it); margin-top: -8px; text-shadow: 0 0 24px var(--it-glow); }
+
+.header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.header .title { flex: 1; text-align: center; font-size: 20px; font-weight: 800; }
+.icon-btn { width: 40px; height: 40px; border-radius: 20px; background: var(--card); display: grid; place-items: center; font-size: 18px; flex-shrink: 0; }
+
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 14px 18px;
+  border-radius: 16px; font-weight: 800; font-size: 16px; letter-spacing: .3px; transition: transform .1s, opacity .1s; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; }
+.btn.big { padding: 18px; font-size: 19px; border-radius: 22px; }
+.btn.primary { background: var(--player); color: #fff; }
+.btn.it { background: var(--it); color: #fff; box-shadow: 0 6px 24px var(--it-glow); }
+.btn.success { background: var(--success); color: #04130a; }
+.btn.secondary { background: var(--card2); border: 1.5px solid var(--border); }
+.btn.danger { border: 1.5px solid var(--danger); color: var(--danger); }
+.btn.ghost { color: var(--muted); }
+.btn.inline { width: auto; padding: 10px 14px; font-size: 14px; border-radius: 12px; }
+
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 16px; }
+.section { display: flex; justify-content: space-between; align-items: center; margin: 22px 0 10px; }
+.section > span:first-child { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: 1.5px; text-transform: uppercase; }
+
+.label { color: var(--muted); font-size: 13px; font-weight: 700; margin-bottom: 6px; display: block; }
+.input { width: 100%; background: var(--card2); color: var(--text); border: 1px solid var(--border); border-radius: 14px;
+  padding: 13px 14px; font-size: 16px; outline: none; }
+.input:focus { border-color: var(--player); }
+.field { margin-bottom: 14px; }
+
+.seg { display: flex; background: var(--card2); border-radius: 14px; padding: 4px; gap: 4px; }
+.seg button { flex: 1; padding: 9px 4px; border-radius: 10px; color: var(--muted); font-weight: 700; font-size: 13px; }
+.seg button.on { background: var(--border); color: var(--text); }
+
+.line { display: flex; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); gap: 10px; }
+.line:last-child { border-bottom: 0; }
+.line .lbl { flex: 1; font-size: 15px; font-weight: 600; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 32px; height: 32px; border-radius: 16px; background: var(--card2); font-size: 18px; font-weight: 700; }
+.stepper .v { min-width: 70px; text-align: center; font-weight: 800; }
+.switch { width: 50px; height: 30px; border-radius: 15px; background: var(--border); position: relative; transition: background .2s; flex-shrink: 0; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 12px; background: #fff; transition: left .2s; }
+.switch.on { background: var(--player); }
+.switch.on::after { left: 23px; }
+
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 800;
+  background: var(--card2); white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 4px; display: inline-block; }
+
+.avatar { border-radius: 50%; display: grid; place-items: center; overflow: hidden; flex-shrink: 0; }
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.list-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--card); border-radius: 16px;
+  margin-bottom: 8px; border: 1.5px solid var(--border); }
+.list-row.tap:active { opacity: .7; }
+
+.mode { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: var(--card);
+  border: 1.5px solid var(--border); text-align: left; width: 100%; }
+.mode.on { border-color: var(--it); background: #2a1a20; }
+.radio { width: 20px; height: 20px; border-radius: 10px; border: 2px solid var(--faint); flex-shrink: 0; }
+.mode.on .radio { border-color: var(--it); background: var(--it); }
+
+.grid-pick { display: flex; flex-wrap: wrap; gap: 10px; }
+.grid-pick button { width: 56px; height: 56px; border-radius: 16px; background: var(--card); font-size: 26px; border: 2px solid transparent; }
+.grid-pick button.on { border-color: var(--it); background: var(--card2); }
+.swatch { width: 44px !important; height: 44px !important; border-radius: 22px !important; border: 3px solid transparent !important; }
+.swatch.on { border-color: #fff !important; }
+
+.code-box { text-align: center; background: var(--card); border: 2px dashed var(--it); border-radius: 22px; padding: 16px; margin: 16px 0; }
+.code-big { font-size: 44px; font-weight: 900; letter-spacing: 10px; margin-top: 4px; }
+.code-input { width: 100%; background: var(--card); color: var(--text); border: 2px solid var(--border); border-radius: 22px;
+  font-size: 40px; font-weight: 900; letter-spacing: 10px; text-align: center; padding: 18px 0; margin: 20px 0; text-transform: uppercase; outline: none; }
+
+.stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.stats.two { grid-template-columns: 1fr 1fr; }
+.stat { background: var(--card); border-radius: 16px; padding: 14px; text-align: center; }
+.stat .v { font-size: 22px; font-weight: 800; }
+
+/* Toasts */
+.toasts { position: fixed; left: 12px; right: 12px; top: calc(var(--st) + 8px); z-index: 3000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; max-width: 560px; margin: 0 auto; }
+.toast { pointer-events: auto; display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 16px; background: var(--card2);
+  box-shadow: 0 6px 24px rgba(0,0,0,.5); animation: drop .25s ease-out; }
+.toast .t { font-weight: 800; font-size: 15px; } .toast .b { font-size: 13px; opacity: .88; margin-top: 2px; }
+.toast.it { background: var(--it); } .toast.it .t { font-size: 18px; }
+.toast.danger { background: #7f1d1d; } .toast.success { background: #14532d; } .toast.warning { background: #78350f; }
+@keyframes drop { from { transform: translateY(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Modals & sheets */
+.backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 2000; display: flex; flex-direction: column; justify-content: flex-end; }
+.backdrop.centered { justify-content: center; padding: 24px; background: rgba(0,0,0,.75); }
+.sheet { background: var(--card); border-radius: 24px 24px 0 0; padding: 14px 20px calc(var(--sb) + 20px); max-height: 80vh; overflow-y: auto;
+  animation: up .2s ease-out; max-width: 560px; width: 100%; margin: 0 auto; }
+.grabber { width: 40px; height: 4px; border-radius: 2px; background: var(--border); margin: 0 auto 12px; }
+.modal { background: var(--card); border-radius: 24px; padding: 22px; border: 2px solid var(--border); max-width: 420px; width: 100%; margin: 0 auto; }
+@keyframes up { from { transform: translateY(40px); opacity: .5; } to { transform: none; opacity: 1; } }
+
+/* Map screens */
+.map { position: absolute; inset: 0; background: #1d2027; }
+.leaflet-container { background: #1d2027; font-family: inherit; }
+.leaflet-control-attribution { background: rgba(0,0,0,.5) !important; color: #888 !important; font-size: 9px !important; }
+.leaflet-control-attribution a { color: #aaa !important; }
+.leaflet-div-icon { background: none; border: 0; }
+.hud-top { position: absolute; left: 10px; right: 10px; top: calc(var(--st) + 6px); z-index: 1000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.hud-top > * { pointer-events: auto; }
+.glass { background: rgba(18,20,24,.93); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.pills { display: flex; flex-wrap: wrap; gap: 6px; }
+.pills .pill { background: rgba(18,20,24,.93); }
+
+.it-banner { display: flex; align-items: center; gap: 10px; background: var(--it); border-radius: 22px; padding: 10px 12px;
+  border: 2px solid rgba(255,255,255,.25); box-shadow: 0 4px 24px var(--it-glow); }
+.it-banner.me { border: 3px solid #fff; animation: throb 1.2s infinite; }
+.it-banner .l { font-size: 11px; font-weight: 900; letter-spacing: 1.5px; opacity: .85; }
+.it-banner .n { font-size: 22px; font-weight: 900; font-style: italic; }
+.it-badge { background: #fff; color: var(--it); font-weight: 900; font-style: italic; border-radius: 8px; padding: 2px 8px; font-size: 14px; }
+@keyframes throb { 50% { box-shadow: 0 0 40px var(--it); } }
+
+.banner { border-radius: 16px; padding: 12px; }
+.banner .t { font-weight: 900; font-size: 16px; } .banner .b { font-size: 13px; opacity: .92; margin-top: 2px; }
+
+.overlay { position: absolute; inset: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.35); pointer-events: none; }
+.big-count { font-size: 120px; font-weight: 900; font-style: italic; text-shadow: 0 0 30px var(--it); line-height: 1; }
+.big-sub { font-size: 22px; font-weight: 900; font-style: italic; }
+
+.hud-bottom { position: absolute; left: 10px; right: 10px; bottom: calc(var(--sb) + 12px); z-index: 1000; pointer-events: none; }
+.hud-bottom > * { pointer-events: auto; }
+.side-btns { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; margin-bottom: 10px; pointer-events: none; }
+.side-btns > * { pointer-events: auto; }
+.round { width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; font-size: 20px; border: 1px solid var(--border); }
+.round.on { background: var(--me); color: #000; }
+.bar { display: flex; align-items: center; justify-content: space-between; border-radius: 32px; padding: 0 20px; height: 72px; border: 1px solid var(--border); }
+.bar-btn { width: 70px; display: flex; flex-direction: column; align-items: center; font-size: 22px; }
+.bar-btn span { font-size: 11px; color: var(--muted); font-weight: 700; margin-top: 2px; }
+.tag-btn { width: 92px; height: 92px; border-radius: 46px; background: var(--it); margin-top: -36px; border: 4px solid var(--bg);
+  font-size: 24px; font-weight: 900; font-style: italic; box-shadow: 0 0 24px var(--it); display: grid; place-items: center; }
+.tag-btn:active { transform: scale(.94); }
+.tag-btn.off { background: var(--card2); box-shadow: none; font-size: 18px; }
+
+.pcard { position: absolute; left: 10px; right: 10px; z-index: 1100; background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 16px; }
+
+/* Player markers */
+.pm { position: relative; width: 64px; height: 64px; display: grid; place-items: center; }
+.pm-ring { border: 3px solid; border-radius: 50%; padding: 1px; background: var(--bg-deep); position: relative; z-index: 2; }
+.pm-dim { opacity: .45; }
+.pm .pulse { position: absolute; width: 44px; height: 44px; border-radius: 50%; background: var(--it); animation: pulse 1.4s ease-out infinite; z-index: 1; }
+@keyframes pulse { from { transform: scale(.8); opacity: .7; } to { transform: scale(2.3); opacity: 0; } }
+.pm-badge { position: absolute; bottom: 2px; z-index: 3; background: var(--it); color: #fff; font-weight: 900; font-style: italic; font-size: 10px;
+  padding: 1px 6px; border-radius: 6px; border: 1.5px solid #fff; }
+.pm-name { position: absolute; top: 58px; z-index: 3; font-size: 11px; font-weight: 800; white-space: nowrap; text-shadow: 0 1px 3px #000, 0 0 2px #000; }
+.pm-frozen { position: absolute; top: 2px; right: 6px; z-index: 3; font-size: 16px; }
+
+.vertex { width: 26px; height: 26px; border-radius: 13px; background: var(--boundary); border: 2px solid #000; color: #000; font-weight: 900;
+  font-size: 11px; display: grid; place-items: center; }
+.vertex.sel { background: #fff; transform: scale(1.25); }
+.safe-mk { width: 30px; height: 30px; border-radius: 15px; background: var(--bg-deep); border: 2px solid var(--safe); display: grid; place-items: center; font-size: 14px; }
+.safe-mk.sel { border-color: #fff; }
+
+.search { display: flex; align-items: center; gap: 8px; border-radius: 999px; padding: 0 14px; height: 46px; border: 1px solid var(--border); flex: 1; }
+.search input { flex: 1; background: none; border: 0; color: var(--text); font-size: 16px; outline: none; min-width: 0; }
+.tip { font-size: 12px; padding: 6px 10px; border-radius: 10px; align-self: flex-start; }
+.editor-bottom { position: absolute; left: 0; right: 0; bottom: 0; z-index: 1000; border-radius: 24px 24px 0 0; padding: 14px 14px calc(var(--sb) + 12px);
+  border-top: 1px solid var(--border); max-width: 560px; margin: 0 auto; }
+.mode-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.mode-row button { flex: 1; padding: 10px; border-radius: 14px; background: var(--card2); font-weight: 800; }
+.mode-row button.b-on { background: var(--boundary); color: #000; }
+.mode-row button.s-on { background: var(--safe); color: #000; }
+
+.mini-map { height: 170px; border-radius: 22px; overflow: hidden; margin-top: 16px; border: 1px solid var(--border); position: relative; }
+.mini-map .map { pointer-events: none; }
+.mini-label { position: absolute; left: 10px; bottom: 10px; z-index: 500; background: rgba(0,0,0,.7); border-radius: 8px; padding: 4px 8px; font-size: 12px; }
+
+.spinner { width: 34px; height: 34px; border: 3px solid var(--border); border-top-color: var(--it); border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+
+.a2hs { background: linear-gradient(135deg, #1e3a8a, #312e81); border-radius: 18px; padding: 14px; margin-top: 18px; }
+
+.ping-ring { position: absolute; width: 40px; height: 40px; border-radius: 50%; border: 3px solid #7dd3fc; animation: ping 1.2s ease-out 2; z-index: 1; }
+@keyframes ping { from { transform: scale(.8); opacity: 1; } to { transform: scale(2.6); opacity: 0; } }
+.pm.ping-fade { animation: pingfade 10s linear forwards; }
+@keyframes pingfade { 0%, 55% { opacity: 1; } 100% { opacity: 0; } }
+
+</style>
+<script src="config.js"></script>
+</head>
+<body>
+<div id="app"><div class="loading"><div class="spinner"></div></div></div>
+<script type="module">
+// ===== lib.js =====
+import { h, render } from 'https://esm.sh/preact@10.24.3';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'https://esm.sh/preact@10.24.3/hooks';
+import htm from 'https://esm.sh/htm@3.1.1';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.57.4';
+
+const html = htm.bind(h);
+
+// ---------------------------------------------------------------- config
+const CFG = window.GIANT_TAG_CONFIG || {};
+const isConfigured = !!(CFG.supabaseUrl && CFG.supabaseAnonKey && !CFG.supabaseUrl.includes('YOUR'));
+const supabase = createClient(CFG.supabaseUrl || 'https://example.supabase.co', CFG.supabaseAnonKey || 'x', {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, storageKey: 'giant-tag-auth' },
+  realtime: { params: { eventsPerSecond: 20 } },
+});
+
+function errorMessage(e) {
+  if (!e) return 'Something went wrong';
+  const m = typeof e === 'string' ? e : e.message || 'Something went wrong';
+  if (/Failed to fetch|NetworkError|Load failed/i.test(m)) return 'No internet connection';
+  return m;
+}
+async function rpc(fn, args) {
+  const { data, error } = await supabase.rpc(fn, args);
+  if (error) throw new Error(errorMessage(error));
+  return data;
+}
+
+// ---------------------------------------------------------------- tiny stores
+function createStore(init) {
+  let s = init; const ls = new Set();
+  return {
+    get: () => s,
+    set(p) { s = { ...s, ...(typeof p === 'function' ? p(s) : p) }; ls.forEach((l) => l()); },
+    replace(v) { s = v; ls.forEach((l) => l()); },
+    sub(l) { ls.add(l); return () => ls.delete(l); },
+  };
+}
+function useStore(store) {
+  const [, force] = useState(0);
+  useEffect(() => store.sub(() => force((x) => x + 1)), [store]);
+  return store.get();
+}
+
+// ---------------------------------------------------------------- router (hash based)
+const routeStore = createStore({ path: location.hash.slice(1) || '/' });
+window.addEventListener('hashchange', () => routeStore.replace({ path: location.hash.slice(1) || '/' }));
+const go = (p) => { location.hash = p; };
+const replace = (p) => { history.replaceState(null, '', '#' + p); routeStore.replace({ path: p }); };
+const back = (fallback = '/home') => { if (history.length > 1) history.back(); else replace(fallback); };
+function parseRoute(path) {
+  const [p, q] = path.split('?');
+  return { parts: p.split('/').filter(Boolean), query: Object.fromEntries(new URLSearchParams(q || '')) };
+}
+
+// ---------------------------------------------------------------- prefs
+const PREF_KEY = 'giant-tag:prefs';
+const PREF_DEFAULTS = { haptics: true, mapType: 'dark', showAccuracy: true, followMe: false, proximityAlerts: true, showNames: true };
+let savedPrefs = {};
+try { savedPrefs = JSON.parse(localStorage.getItem(PREF_KEY) || '{}'); } catch {}
+const prefsStore = createStore({ ...PREF_DEFAULTS, ...savedPrefs });
+prefsStore.sub(() => { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefsStore.get())); } catch {} });
+const setPref = (k, v) => prefsStore.set({ [k]: v });
+
+// ---------------------------------------------------------------- toasts
+const toastStore = createStore({ list: [] });
+let toastId = 1;
+function toast({ title, body, tone = 'info' }) {
+  const id = toastId++;
+  toastStore.set((s) => ({ list: [...s.list.slice(-2), { id, title, body, tone }] }));
+  if (prefsStore.get().haptics && navigator.vibrate && tone !== 'info') navigator.vibrate(tone === 'it' ? [0, 200, 100, 200] : 120);
+  setTimeout(() => toastStore.set((s) => ({ list: s.list.filter((t) => t.id !== id) })), tone === 'it' ? 5000 : 3500);
+}
+
+// ---------------------------------------------------------------- auth
+const authStore = createStore({ session: null, profile: null, loading: true });
+async function loadProfile() {
+  const uid = authStore.get().session?.user?.id;
+  if (!uid) { authStore.set({ profile: null }); return null; }
+  const { data } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
+  authStore.set({ profile: data || null });
+  return data;
+}
+if (isConfigured) {
+  supabase.auth.getSession().then(async ({ data }) => {
+    authStore.set({ session: data.session });
+    await loadProfile();
+    authStore.set({ loading: false });
+  });
+  supabase.auth.onAuthStateChange((_e, session) => {
+    const prev = authStore.get().session?.user?.id;
+    authStore.set({ session });
+    if (session?.user?.id !== prev) loadProfile();
+  });
+} else {
+  authStore.set({ loading: false });
+}
+
+// ---------------------------------------------------------------- types / constants
+const MODE_INFO = {
+  classic: { title: 'Classic Tag', emoji: '🏃', blurb: 'Whoever gets tagged becomes IT. Spend the least time as IT to win.' },
+  infection: { title: 'Infection', emoji: '🧟', blurb: 'Everyone tagged joins the IT team. Last survivor wins.' },
+  elimination: { title: 'Elimination', emoji: '💀', blurb: 'Tagged players are out. Last runner standing wins.' },
+  team: { title: 'Team Tag', emoji: '⚔️', blurb: 'Two teams hunt each other. Most players left wins.' },
+  last_standing: { title: 'Last Person Standing', emoji: '👑', blurb: 'Tagged players are out, and a new hunter is released every few minutes.' },
+};
+const TEAM_INFO = { alpha: { name: 'Team Blaze', color: '#F97316' }, bravo: { name: 'Team Volt', color: '#A855F7' } };
+const AVATAR_EMOJIS = ['🏃', '🦊', '🐺', '🦖', '🐸', '🐯', '🦄', '🐙', '👻', '🤖', '🥷', '🧙', '🦸', '🐼', '🐵', '🔥'];
+const AVATAR_COLORS = ['#3B82F6', '#22C55E', '#F97316', '#A855F7', '#EC4899', '#14B8A6', '#EAB308', '#64748B'];
+const C = {
+  it: '#FF2D55', player: '#3B82F6', me: '#22C55E', gray: '#6B7280', boundary: '#FACC15', safe: '#2DD4BF',
+  warning: '#F59E0B', danger: '#EF4444', success: '#22C55E', card2: '#252A33', muted: '#9AA3B2',
+};
+
+const DEFAULT_SETTINGS = {
+  name: '', mode: 'classic', location_name: null, boundary: [], safe_zones: [], max_radius_m: null,
+  max_players: 20, duration_seconds: 1800, countdown_seconds: 60, starting_it_id: null, tag_radius_m: 25,
+  tag_back_cooldown_seconds: 60, tag_confirm_timeout_seconds: 60, escalation_interval_seconds: 300,
+  out_of_bounds_action: 'become_it', grace_seconds: 20, speed_limit_mph: 18, speed_grace_seconds: 10, it_ping_seconds: 60,
+  allow_rejoin: false, allow_spectators: true, location_retention_hours: 24,
+};
+const draftStore = createStore({ ...DEFAULT_SETTINGS });
+const settingsOf = (g) => Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((k) => [k, g[k]]));
+
+// ---------------------------------------------------------------- geo
+const R = 6371000;
+const rad = (d) => (d * Math.PI) / 180;
+function distanceM(a, b) {
+  const dLat = rad(b.latitude - a.latitude), dLng = rad(b.longitude - a.longitude);
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.latitude)) * Math.cos(rad(b.latitude)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+function pointInPolygon(p, poly) {
+  if (!poly || poly.length < 3) return true;
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i].longitude, yi = poly[i].latitude, xj = poly[j].longitude, yj = poly[j].latitude;
+    if (yi > p.latitude !== yj > p.latitude && p.longitude < ((xj - xi) * (p.latitude - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function distanceToEdgeM(p, poly) {
+  if (!poly || poly.length < 2) return Infinity;
+  const kx = Math.cos(rad(p.latitude)) * R * (Math.PI / 180), ky = R * (Math.PI / 180);
+  const pts = poly.map((q) => ({ x: (q.longitude - p.longitude) * kx, y: (q.latitude - p.latitude) * ky }));
+  let best = Infinity;
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[i], b = pts[(i + 1) % pts.length], dx = b.x - a.x, dy = b.y - a.y, len2 = dx * dx + dy * dy;
+    const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, -(a.x * dx + a.y * dy) / len2));
+    best = Math.min(best, Math.hypot(a.x + t * dx, a.y + t * dy));
+  }
+  return best;
+}
+function centroid(poly) {
+  if (!poly?.length) return null;
+  const s = poly.reduce((a, p) => ({ latitude: a.latitude + p.latitude, longitude: a.longitude + p.longitude }), { latitude: 0, longitude: 0 });
+  return { latitude: s.latitude / poly.length, longitude: s.longitude / poly.length };
+}
+const maxDistanceFromCentre = (poly) => { const c = centroid(poly); return c ? Math.max(...poly.map((p) => distanceM(c, p))) : 0; };
+function areaKm2(poly) {
+  if (!poly || poly.length < 3) return 0;
+  const c = centroid(poly), kx = Math.cos(rad(c.latitude)) * R * (Math.PI / 180), ky = R * (Math.PI / 180);
+  let s = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const a = poly[i], b = poly[(i + 1) % poly.length];
+    s += a.longitude * kx * (b.latitude * ky) - b.longitude * kx * (a.latitude * ky);
+  }
+  return Math.abs(s / 2) / 1e6;
+}
+const inSafeZone = (p, zones) => (zones || []).find((z) => distanceM(p, z) <= z.radius) || null;
+const toLL = (p) => [p.latitude, p.longitude];
+const fromLL = (ll) => ({ latitude: ll.lat, longitude: ll.lng });
+function formatDistance(m) {
+  if (m == null || !isFinite(m)) return '—';
+  return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(m < 10000 ? 1 : 0)} km`;
+}
+
+// ---------------------------------------------------------------- format
+function formatClock(sec) {
+  const s = Math.max(0, Math.floor(sec)), h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+  return `${h ? h + ':' : ''}${h ? String(m).padStart(2, '0') : m}:${String(x).padStart(2, '0')}`;
+}
+function formatDuration(sec) {
+  const s = Math.max(0, Math.floor(sec || 0));
+  if (s < 60) return `${s}s`;
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h ? `${h}h ${m}m` : `${m}m ${s % 60}s`;
+}
+function timeAgo(iso, now = Date.now()) {
+  if (!iso) return 'never';
+  const s = Math.max(0, Math.round((now - new Date(iso).getTime()) / 1000));
+  if (s < 5) return 'just now'; if (s < 60) return `${s}s ago`; if (s < 3600) return `${Math.floor(s / 60)}m ago`;
+  return `${Math.floor(s / 3600)}h ago`;
+}
+const secondsSince = (iso, now = Date.now()) => (iso ? (now - new Date(iso).getTime()) / 1000 : Infinity);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const safeUrl = (u) => (typeof u === 'string' && /^https:\/\//.test(u) ? u : null);
+
+// ---------------------------------------------------------------- game logic (mirrors server rules)
+const INACTIVE_AFTER_S = 90;
+function playerState(p, loc, game, now = Date.now()) {
+  if (p.left_at) return 'left';
+  if (p.role === 'spectator') return 'spectator';
+  if (p.is_eliminated) return 'eliminated';
+  const live = game && ['countdown', 'active', 'paused'].includes(game.status);
+  if (live && secondsSince(loc?.updated_at ?? p.last_seen_at, now) > INACTIVE_AFTER_S) return 'inactive';
+  return p.is_it ? 'it' : 'active';
+}
+const STATE_LABEL = { it: 'IT', active: 'Running', eliminated: 'Eliminated', spectator: 'Spectating', left: 'Left the game', inactive: 'Signal lost' };
+function survivalSeconds(p, game, now = Date.now()) {
+  if (p.survival_seconds != null) return p.survival_seconds;
+  if (!game.started_at) return 0;
+  const start = new Date(game.started_at).getTime();
+  const paused = game.paused_seconds + (game.paused_at ? (now - new Date(game.paused_at).getTime()) / 1000 : 0);
+  if (game.mode === 'classic') {
+    const itNow = p.it_since ? Math.max(0, (now - new Date(p.it_since).getTime()) / 1000) : 0;
+    const end = p.left_at ? new Date(p.left_at).getTime() : now;
+    return Math.max(0, (end - start) / 1000 - paused - p.it_total_seconds - itNow);
+  }
+  const end = p.caught_at ?? p.left_at;
+  if (end) return Math.max(0, (new Date(end).getTime() - start) / 1000);
+  return Math.max(0, (now - start) / 1000 - paused);
+}
+const isFrozen = (p, now = Date.now()) => !!p?.frozen_until && new Date(p.frozen_until).getTime() > now;
+function canTag(me, them, game) {
+  if (!me || !game || game.status !== 'active' || me.user_id === them.user_id) return false;
+  if (me.role !== 'player' || me.left_at || me.is_eliminated || me.is_paused || isFrozen(me)) return false;
+  if (them.role !== 'player' || them.left_at || them.is_eliminated || them.is_paused) return false;
+  if (game.mode === 'team') return !!me.team && me.team !== them.team;
+  return me.is_it && !them.is_it;
+}
+function isTagger(me, game) {
+  if (!me || !game || me.role !== 'player' || me.is_eliminated || me.left_at) return false;
+  return game.mode === 'team' ? true : me.is_it;
+}
+function remainingCount(players, game) {
+  const inGame = players.filter((p) => p.role === 'player' && !p.left_at && !p.is_eliminated);
+  if (!game || game.mode === 'classic' || game.mode === 'team') return inGame.length;
+  return inGame.filter((p) => !p.is_it).length;
+}
+function gameSecondsLeft(game, now = Date.now()) {
+  if (!game.ends_at) return game.duration_seconds;
+  const ref = game.status === 'paused' && game.paused_at ? new Date(game.paused_at).getTime() : now;
+  return Math.max(0, (new Date(game.ends_at).getTime() - ref) / 1000);
+}
+function gamePath(g) {
+  if (g.status === 'lobby') return `/g/${g.id}/lobby`;
+  if (['countdown', 'active', 'paused'].includes(g.status)) return `/g/${g.id}/play`;
+  return `/g/${g.id}/results`;
+}
+
+// ---------------------------------------------------------------- hooks
+function useNow(ms = 1000) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => { const t = setInterval(() => setNow(Date.now()), ms); return () => clearInterval(t); }, [ms]);
+  return now;
+}
+
+/** Live game state via Supabase Realtime (RLS-filtered). Resyncs on reconnect and when the tab becomes visible. */
+function useGame(gameId, onEvent) {
+  const [st, setSt] = useState({ game: null, players: [], locations: {}, pings: {}, requests: [], history: [], loading: true, error: null, connected: false });
+  const set = (p) => setSt((s) => ({ ...s, ...(typeof p === 'function' ? p(s) : p) }));
+  const onEventRef = useRef(onEvent); onEventRef.current = onEvent;
+  const seen = useRef(new Set());
+  const once = useRef(false);
+
+  const loadPlayers = useCallback(async () => {
+    const { data } = await supabase.from('game_players').select('*, profile:profiles(*)').eq('game_id', gameId).order('joined_at');
+    if (data) set({ players: data });
+  }, [gameId]);
+  const loadRequests = useCallback(async () => {
+    const { data } = await supabase.from('tag_requests').select('*').eq('game_id', gameId).in('status', ['pending', 'disputed']).order('created_at');
+    if (data) set({ requests: data });
+  }, [gameId]);
+  const loadPings = useCallback(async () => {
+    const { data } = await supabase.from('location_pings').select('*').eq('game_id', gameId);
+    const map = {}; (data || []).forEach((l) => (map[l.user_id] = l));
+    set({ pings: map });
+  }, [gameId]);
+  const loadLocations = useCallback(async () => {
+    const { data } = await supabase.from('player_locations').select('*').eq('game_id', gameId);
+    const map = {}; (data || []).forEach((l) => (map[l.user_id] = l));
+    set({ locations: map });
+  }, [gameId]);
+  const reload = useCallback(async () => {
+    try {
+      const [g, , locs, hist] = await Promise.all([
+        supabase.from('games').select('*').eq('id', gameId).single(),
+        loadPlayers(),
+        supabase.from('player_locations').select('*').eq('game_id', gameId),
+        supabase.from('tag_history').select('*').eq('game_id', gameId).order('created_at'),
+        loadRequests(),
+        loadPings(),
+      ]);
+      if (g.error) throw g.error;
+      const map = {}; (locs.data || []).forEach((l) => (map[l.user_id] = l));
+      set({ game: g.data, locations: map, history: hist.data || [], error: null, loading: false });
+    } catch (e) { set({ error: errorMessage(e), loading: false }); }
+  }, [gameId, loadPlayers, loadRequests]);
+
+  useEffect(() => {
+    if (!gameId) return;
+    reload();
+    const filter = `game_id=eq.${gameId}`;
+    const ch = supabase.channel(`game:${gameId}:${Math.random().toString(36).slice(2, 7)}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'games', filter: `id=eq.${gameId}` },
+        (p) => p.new && p.new.id && set({ game: p.new }))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_players', filter }, loadPlayers)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'game_players', filter }, (p) =>
+        set((s) => ({ players: s.players.map((x) => (x.id === p.new.id ? { ...p.new, profile: x.profile } : x)) })))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'game_players' }, loadPlayers)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'player_locations', filter }, (p) =>
+        set((s) => ({ locations: { ...s.locations, [p.new.user_id]: p.new } })))
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'player_locations', filter }, (p) =>
+        set((s) => ({ locations: { ...s.locations, [p.new.user_id]: p.new } })))
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'player_locations' }, (p) => {
+        if (p.old?.game_id !== gameId) return;
+        set((s) => { const l = { ...s.locations }; delete l[p.old.user_id]; return { locations: l }; });
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'tag_requests', filter }, loadRequests)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'tag_history', filter }, (p) =>
+        set((s) => ({ history: [...s.history, p.new] })))
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'game_events', filter }, (p) => {
+        if (seen.current.has(p.new.id)) return;
+        seen.current.add(p.new.id);
+        onEventRef.current?.(p.new);
+      })
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') { set({ connected: true }); if (once.current) reload(); once.current = true; }
+        else if (['CHANNEL_ERROR', 'TIMED_OUT', 'CLOSED'].includes(status)) set({ connected: false });
+      });
+    const vis = () => document.visibilityState === 'visible' && reload();
+    document.addEventListener('visibilitychange', vis);
+    window.addEventListener('online', reload);
+    return () => { document.removeEventListener('visibilitychange', vis); window.removeEventListener('online', reload); supabase.removeChannel(ch); };
+  }, [gameId]);
+
+  // New IT ping → fetch the snapshot (no notification, the map just updates)
+  useEffect(() => { if (gameId && st.game?.last_ping_at) loadPings(); }, [st.game?.last_ping_at]);
+  // Who's IT changed → what we're allowed to see live changed too
+  const itKey = st.players.filter((p) => p.is_it).map((p) => p.user_id).sort().join(',');
+  const firstIt = useRef(true);
+  useEffect(() => { if (firstIt.current) { firstIt.current = false; return; } if (gameId) loadLocations(); }, [itKey]);
+
+  const byUser = useMemo(() => new Map(st.players.map((p) => [p.user_id, p])), [st.players]);
+  return { ...st, reload, playerOf: (id) => (id ? byUser.get(id) : undefined), profileOf: (id) => (id ? byUser.get(id)?.profile : undefined) };
+}
+
+const MIN_INTERVAL_MS = 2000, MIN_MOVE_M = 4, HEARTBEAT_MS = 15000;
+/** Streams GPS to report_location() while enabled, throttled; keeps the screen awake. */
+function useLocationSharing(gameId, enabled) {
+  const [st, setSt] = useState({ permission: 'unknown', position: null, lastFixAt: null, lastSentAt: null, report: null, offline: false, wakeLock: false });
+  const set = (p) => setSt((s) => ({ ...s, ...p }));
+  const latest = useRef(null), lastSent = useRef(null), inFlight = useRef(false);
+
+  const send = useCallback(async (force = false) => {
+    const pos = latest.current;
+    if (!gameId || !pos || inFlight.current) return;
+    const now = Date.now(), prev = lastSent.current;
+    if (!force && prev) {
+      const el = now - prev.at, moved = distanceM(prev.pos, pos);
+      const accBetter = prev.acc != null && pos.accuracy != null && prev.acc - pos.accuracy > 10;
+      if (el < MIN_INTERVAL_MS || (moved < MIN_MOVE_M && !accBetter && el < HEARTBEAT_MS)) return;
+    }
+    inFlight.current = true;
+    try {
+      const { data, error } = await supabase.rpc('report_location', {
+        g: gameId, lat: pos.latitude, lng: pos.longitude, acc: pos.accuracy, hdg: pos.heading, spd: pos.speed,
+      });
+      if (error) throw error;
+      lastSent.current = { at: now, pos, acc: pos.accuracy };
+      set({ report: data, lastSentAt: now, offline: false });
+    } catch { set({ offline: true }); }
+    finally { inFlight.current = false; }
+  }, [gameId]);
+
+  useEffect(() => {
+    if (!enabled || !gameId) return;
+    if (!navigator.geolocation) { set({ permission: 'denied' }); return; }
+    const id = navigator.geolocation.watchPosition(
+      (p) => {
+        const c = p.coords;
+        latest.current = { latitude: c.latitude, longitude: c.longitude, accuracy: c.accuracy ?? null,
+          heading: Number.isFinite(c.heading) ? c.heading : null, speed: Number.isFinite(c.speed) ? c.speed : null };
+        set({ permission: 'granted', position: latest.current, lastFixAt: Date.now() });
+        send();
+      },
+      (err) => { if (err.code === 1) set({ permission: 'denied' }); },
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
+    );
+    const timer = setInterval(() => send(), 5000);
+
+    // Keep the screen on — the web can't track location while the phone is locked.
+    let lock = null, alive = true;
+    const acquire = async () => {
+      try { if ('wakeLock' in navigator && document.visibilityState === 'visible') { lock = await navigator.wakeLock.request('screen'); if (alive) set({ wakeLock: true }); lock.addEventListener('release', () => alive && set({ wakeLock: false })); } } catch {}
+    };
+    acquire();
+    const vis = () => { if (document.visibilityState === 'visible') { acquire(); send(true); } };
+    document.addEventListener('visibilitychange', vis);
+    return () => { alive = false; navigator.geolocation.clearWatch(id); clearInterval(timer); document.removeEventListener('visibilitychange', vis); lock?.release?.().catch(() => {}); };
+  }, [enabled, gameId, send]);
+
+  return { ...st, sendNow: () => send(true) };
+}
+
+// ---------------------------------------------------------------- Leaflet helpers
+const TILES = {
+  dark: { url: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', attr: '© OpenStreetMap © CARTO', sub: 'abcd' },
+  streets: { url: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', attr: '© OpenStreetMap © CARTO', sub: 'abcd' },
+  satellite: { url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', attr: 'Imagery © Esri', sub: '' },
+};
+/** Create a Leaflet map in a div ref; returns the map once ready. Tile layer follows prefs.mapType. */
+function useLeafletMap(ref, { center, zoom = 15, bounds, interactive = true } = {}) {
+  const [map, setMap] = useState(null);
+  const prefs = useStore(prefsStore);
+  const tiles = useRef(null);
+  useEffect(() => {
+    const m = L.map(ref.current, {
+      zoomControl: false, attributionControl: true, dragging: interactive, scrollWheelZoom: interactive,
+      touchZoom: interactive, doubleClickZoom: interactive, boxZoom: false, keyboard: false, tap: interactive,
+    });
+    if (bounds?.length >= 2) m.fitBounds(L.latLngBounds(bounds.map(toLL)), { padding: [30, 30] });
+    else m.setView(center ? toLL(center) : [40.7128, -74.006], zoom);
+    setMap(m);
+    const ro = new ResizeObserver(() => m.invalidateSize()); ro.observe(ref.current);
+    return () => { ro.disconnect(); m.remove(); };
+  }, []);
+  useEffect(() => {
+    if (!map) return;
+    const t = TILES[prefs.mapType] || TILES.dark;
+    tiles.current?.remove();
+    tiles.current = L.tileLayer(t.url, { attribution: t.attr, subdomains: t.sub || 'abc', maxZoom: 20, detectRetina: true }).addTo(map);
+  }, [map, prefs.mapType]);
+  return map;
+}
+
+function avatarHtml(profile, size) {
+  const url = safeUrl(profile?.avatar_url);
+  const bg = /^#[0-9a-f]{3,8}$/i.test(profile?.avatar_color || '') ? profile.avatar_color : '#252A33';
+  const inner = url ? `<img src="${esc(url)}" />` : `<span style="font-size:${size * 0.5}px">${esc(profile?.avatar_emoji || '🏃')}</span>`;
+  return `<div class="avatar" style="width:${size}px;height:${size}px;background:${bg}">${inner}</div>`;
+}
+function markerColor(state, isMe, teamColor) {
+  if (state === 'it') return C.it;
+  if (['eliminated', 'inactive', 'left'].includes(state)) return C.gray;
+  if (isMe) return C.me;
+  return teamColor || C.player;
+}
+function playerIconHtml({ profile, state, isMe, teamColor, frozen, showName, pinged, stale }) {
+  const it = state === 'it', color = markerColor(state, isMe, teamColor), size = it ? 40 : 34;
+  const dim = state === 'inactive' || state === 'eliminated' || stale;
+  return `<div class="pm ${pinged ? 'ping-fade' : ''}">${it ? '<div class="pulse"></div>' : ''}${pinged ? '<div class="ping-ring"></div>' : ''}<div class="pm-ring ${dim ? 'pm-dim' : ''}" style="border-color:${color};box-shadow:0 0 12px ${color}">${avatarHtml(profile, size)}</div>${it ? '<div class="pm-badge">IT</div>' : ''}${frozen ? '<div class="pm-frozen">🧊</div>' : ''}${showName ? `<div class="pm-name">${esc(isMe ? 'You' : profile?.username)}</div>` : ''}</div>`;
+}
+
+function vibrate(pattern) { if (prefsStore.get().haptics && navigator.vibrate) navigator.vibrate(pattern); }
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true;
+
+// ===== ui.js =====
+
+function Screen({ children }) { return html`<div class="screen">${children}</div>`; }
+
+function Header({ title, right, noBack, onBack }) {
+  return html`<div class="header">
+    ${noBack ? html`<div style="width:40px"></div>` : html`<button class="icon-btn" onClick=${onBack || (() => back())} aria-label="Back">‹</button>`}
+    <div class="title ellipsis">${title}</div>
+    <div style="min-width:40px;display:flex;justify-content:flex-end">${right}</div>
+  </div>`;
+}
+
+function Button({ title, onClick, variant = 'primary', icon, loading, disabled, big, inline, style }) {
+  return html`<button class=${`btn ${variant} ${big ? 'big' : ''} ${inline ? 'inline' : ''}`} style=${style}
+    disabled=${disabled || loading} onClick=${onClick}>
+    ${loading ? html`<div class="spinner" style="width:20px;height:20px;border-width:2px"></div>` : html`${icon ? html`<span>${icon}</span>` : null}${title}`}
+  </button>`;
+}
+
+const Card = ({ children, style }) => html`<div class="card" style=${style}>${children}</div>`;
+const Section = ({ children, right }) => html`<div class="section"><span>${children}</span>${right}</div>`;
+
+function Field({ label, hint, value, onInput, ...rest }) {
+  return html`<div class="field">
+    ${label && html`<label class="label">${label}</label>`}
+    <input class="input" value=${value} onInput=${(e) => onInput(e.target.value)} ...${rest} />
+    ${hint && html`<div class="small mt8" style="margin-top:4px">${hint}</div>`}
+  </div>`;
+}
+
+function Segmented({ options, value, onChange }) {
+  return html`<div class="seg">${options.map((o) => html`
+    <button class=${value === o.value ? 'on' : ''} onClick=${() => onChange(o.value)}>${o.label}</button>`)}</div>`;
+}
+
+function Stepper({ label, value, onChange, step = 1, min = 0, max = 9999, format }) {
+  return html`<div class="line">
+    <div class="lbl">${label}</div>
+    <div class="stepper">
+      <button onClick=${() => onChange(Math.max(min, value - step))}>−</button>
+      <div class="v">${format ? format(value) : value}</div>
+      <button onClick=${() => onChange(Math.min(max, value + step))}>+</button>
+    </div>
+  </div>`;
+}
+
+function Toggle({ label, sub, value, onChange }) {
+  return html`<div class="line" onClick=${() => onChange(!value)} style="cursor:pointer">
+    <div class="grow"><div class="lbl">${label}</div>${sub && html`<div class="small">${sub}</div>`}</div>
+    <div class=${`switch ${value ? 'on' : ''}`}></div>
+  </div>`;
+}
+
+function LinkRow({ label, sub, value, onClick, icon }) {
+  return html`<div class="line" onClick=${onClick} style=${onClick ? 'cursor:pointer' : ''}>
+    ${icon && html`<span style="font-size:18px">${icon}</span>`}
+    <div class="grow"><div class="lbl">${label}</div>${sub && html`<div class="small">${sub}</div>`}</div>
+    ${value && html`<span class="small">${value}</span>`}
+    ${onClick && html`<span class="small">›</span>`}
+  </div>`;
+}
+
+const Pill = ({ children, color, text, style }) =>
+  html`<span class="pill" style=${{ background: color, color: text, ...(style || {}) }}>${children}</span>`;
+
+function Avatar({ profile, size = 44, ring, dim, style }) {
+  const url = safeUrl(profile?.avatar_url);
+  return html`<div class="avatar" style=${{
+    width: size + 'px', height: size + 'px', background: profile?.avatar_color || '#252A33',
+    border: ring ? `${Math.max(2, Math.round(size * 0.07))}px solid ${ring}` : 'none', opacity: dim ? 0.45 : 1, ...(style || {}),
+  }}>${url ? html`<img src=${url} />` : html`<span style=${{ fontSize: size * 0.5 + 'px' }}>${profile?.avatar_emoji || '🏃'}</span>`}</div>`;
+}
+
+const Logo = () => html`<div class="logo"><span class="a">GIANT</span><span class="b">TAG</span></div>`;
+
+const Loading = ({ label }) => html`<div class="loading"><div class="spinner"></div>${label && html`<div class="muted">${label}</div>`}</div>`;
+
+function Sheet({ open, onClose, title, children }) {
+  if (!open) return null;
+  return html`<div class="backdrop" onClick=${onClose}>
+    <div class="sheet" onClick=${(e) => e.stopPropagation()}>
+      <div class="grabber"></div>
+      ${title && html`<h2 class="h2" style="margin-bottom:10px">${title}</h2>`}
+      ${children}
+    </div>
+  </div>`;
+}
+
+function Modal({ open, children, borderColor }) {
+  if (!open) return null;
+  return html`<div class="backdrop centered"><div class="modal" style=${borderColor ? { borderColor } : null}>${children}</div></div>`;
+}
+
+function Toasts() {
+  const { list } = useStore(toastStore);
+  const icon = { info: '📣', it: '🔴', danger: '⚠️', success: '✅', warning: '🚨' };
+  return html`<div class="toasts">${list.map((t) => html`
+    <div class=${`toast ${t.tone}`} key=${t.id} onClick=${() => toastStore.set((s) => ({ list: s.list.filter((x) => x.id !== t.id) }))}>
+      <span style="font-size:22px">${icon[t.tone]}</span>
+      <div class="grow"><div class="t">${t.title}</div>${t.body && html`<div class="b">${t.body}</div>`}</div>
+    </div>`)}</div>`;
+}
+
+/** Simple promise-based confirm that looks native enough on phones. */
+function confirmAsk(message) { return Promise.resolve(window.confirm(message)); }
+
+// ===== screens.js =====
+
+// ====================================================================== SIGN IN
+function SignIn() {
+  const [mode, setMode] = useState('guest');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [busy, setBusy] = useState(null);
+
+  const guest = async () => {
+    setBusy('guest');
+    try {
+      const { error } = await supabase.auth.signInAnonymously();
+      if (error) throw error;
+      replace('/');
+    } catch (e) { toast({ title: 'Could not start', body: errorMessage(e), tone: 'danger' }); }
+    finally { setBusy(null); }
+  };
+  const submit = async () => {
+    if (!email.includes('@') || password.length < 6) return toast({ title: 'Enter an email and a 6+ character password', tone: 'warning' });
+    setBusy('email');
+    try {
+      if (mode === 'up') {
+        const { data, error } = await supabase.auth.signUp({ email: email.trim(), password });
+        if (error) throw error;
+        if (!data.session) { toast({ title: 'Check your email to confirm, then sign in', tone: 'info' }); setMode('in'); return; }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (error) throw error;
+      }
+      replace('/');
+    } catch (e) { toast({ title: 'Sign in failed', body: errorMessage(e), tone: 'danger' }); }
+    finally { setBusy(null); }
+  };
+
+  return html`<${Screen}>
+    <div style="margin:50px 0 30px" class="center-col"><${Logo} /><p class="muted">The whole town is the playground.</p></div>
+    ${mode === 'guest' ? html`
+      <${Button} big variant="it" title="PLAY NOW" icon="▶" loading=${busy === 'guest'} onClick=${guest} />
+      <p class="small" style="text-align:center">No sign-up needed. Your player stays on this phone.</p>
+      <${Button} variant="ghost" title="Use an email account instead" onClick=${() => setMode('in')} />
+    ` : html`
+      <${Segmented} value=${mode} onChange=${setMode} options=${[{ value: 'in', label: 'Sign in' }, { value: 'up', label: 'Create account' }]} />
+      <div style="height:16px"></div>
+      <${Field} label="Email" type="email" autocomplete="email" value=${email} onInput=${setEmail} placeholder="you@example.com" />
+      <${Field} label="Password" type="password" value=${password} onInput=${setPassword} placeholder="••••••••" />
+      <${Button} big variant="it" title=${mode === 'in' ? 'SIGN IN' : 'CREATE ACCOUNT'} loading=${busy === 'email'} onClick=${submit} />
+      <${Button} variant="ghost" title="Back to quick play" onClick=${() => setMode('guest')} style="margin-top:8px" />
+    `}
+    <p class="small" style="text-align:center;margin-top:28px">Your location is only shared with players in a game you join, and only while that game is running.</p>
+  <//>`;
+}
+
+// ====================================================================== PROFILE SETUP
+function ProfileSetup() {
+  const { session, profile } = useStore(authStore);
+  const editing = !!profile;
+  const [username, setUsername] = useState(profile?.username || '');
+  const [emoji, setEmoji] = useState(profile?.avatar_emoji || AVATAR_EMOJIS[0]);
+  const [color, setColor] = useState(profile?.avatar_color || AVATAR_COLORS[0]);
+  const [photo, setPhoto] = useState(profile?.avatar_url || null);
+  const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const fileRef = useRef();
+
+  const pick = (e) => {
+    const f = e.target.files?.[0]; if (!f) return;
+    setFile(f); setPreview(URL.createObjectURL(f));
+  };
+  const save = async () => {
+    const uid = session?.user?.id; if (!uid) return;
+    if (!/^[A-Za-z0-9_]{3,20}$/.test(username)) return toast({ title: 'Username: 3–20 letters, numbers or _', tone: 'warning' });
+    setBusy(true);
+    try {
+      let avatar_url = photo;
+      if (file) {
+        const small = await shrinkImage(file);
+        const path = `${uid}/avatar-${Date.now()}.jpg`;
+        const { error } = await supabase.storage.from('avatars').upload(path, small, { contentType: 'image/jpeg', upsert: true });
+        if (error) throw error;
+        avatar_url = supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+      }
+      const fields = { username, avatar_emoji: emoji, avatar_color: color, avatar_url };
+      const { error } = editing ? await supabase.from('profiles').update(fields).eq('id', uid) : await supabase.from('profiles').insert({ id: uid, ...fields });
+      if (error) throw error.code === '23505' ? new Error('That username is taken') : error;
+      await loadProfile();
+      if (editing) back(); else replace(sessionStorage.getItem('gt:after-profile') || '/home');
+      sessionStorage.removeItem('gt:after-profile');
+    } catch (e) { toast({ title: 'Could not save', body: errorMessage(e), tone: 'danger' }); }
+    finally { setBusy(false); }
+  };
+
+  const shown = { avatar_url: preview || photo, avatar_emoji: emoji, avatar_color: color };
+  return html`<${Screen}>
+    <${Header} title=${editing ? 'Edit profile' : 'Create your player'} noBack=${!editing} />
+    <div class="center-col" style="margin:8px 0 18px">
+      <${Avatar} profile=${shown} size=${110} ring=${C.me} />
+      <div class="row mt12">
+        <${Button} inline variant="secondary" icon="📷" title="Photo" onClick=${() => fileRef.current.click()} />
+        ${(photo || preview) && html`<${Button} inline variant="ghost" title="Use emoji" onClick=${() => { setPhoto(null); setFile(null); setPreview(null); }} />`}
+      </div>
+      <input ref=${fileRef} type="file" accept="image/*" style="display:none" onChange=${pick} />
+    </div>
+    <${Field} label="Username" value=${username} onInput=${setUsername} maxlength="20" autocapitalize="off" autocorrect="off" placeholder="speedy_sam" hint="Shown to other players on the map." />
+    <${Section}>Avatar<//>
+    <div class="grid-pick">${AVATAR_EMOJIS.map((e) => html`<button class=${emoji === e ? 'on' : ''} onClick=${() => setEmoji(e)}>${e}</button>`)}</div>
+    <${Section}>Colour<//>
+    <div class="grid-pick">${AVATAR_COLORS.map((c) => html`<button class=${`swatch ${color === c ? 'on' : ''}`} style=${{ background: c }} onClick=${() => setColor(c)}></button>`)}</div>
+    <${Button} big variant="it" title=${editing ? 'SAVE' : "LET'S PLAY"} loading=${busy} onClick=${save} style="margin-top:28px" />
+  <//>`;
+}
+
+function shrinkImage(file) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const s = 320, c = document.createElement('canvas'); c.width = s; c.height = s;
+      const m = Math.min(img.width, img.height);
+      c.getContext('2d').drawImage(img, (img.width - m) / 2, (img.height - m) / 2, m, m, 0, 0, s, s);
+      c.toBlob((b) => resolve(b || file), 'image/jpeg', 0.8);
+    };
+    img.onerror = () => resolve(file);
+    img.src = URL.createObjectURL(file);
+  });
+}
+
+// ====================================================================== HOME
+function Home() {
+  const { profile } = useStore(authStore);
+  const [rows, setRows] = useState([]);
+  useEffect(() => {
+    if (!profile) return;
+    supabase.from('game_players').select('game_id, role, is_winner, final_rank, left_at, games(*)')
+      .eq('user_id', profile.id).order('joined_at', { ascending: false }).limit(25)
+      .then(({ data }) => setRows((data || []).filter((r) => r.games)));
+  }, [profile?.id]);
+  const live = rows.filter((r) => ['lobby', 'countdown', 'active', 'paused'].includes(r.games.status) && !r.left_at);
+  const past = rows.filter((r) => r.games.status === 'finished');
+
+  return html`<${Screen}>
+    <div class="row" style="justify-content:space-between">
+      <button class="icon-btn" onClick=${() => go('/settings')}>⚙️</button>
+      <button class="row" style="background:var(--card);border-radius:999px;padding:4px 4px 4px 14px" onClick=${() => go('/profile')}>
+        <b>${profile?.username}</b><${Avatar} profile=${profile} size=${36} ring=${C.me} />
+      </button>
+    </div>
+    <div style="margin:36px 0"><${Logo} /></div>
+    <div class="gap12">
+      <${Button} big variant="it" icon="➕" title="CREATE GAME" onClick=${() => { draftStore.replace({ ...DEFAULT_SETTINGS }); go('/create'); }} />
+      <${Button} big icon="🎟️" title="JOIN GAME" onClick=${() => go('/join')} />
+      <${Button} variant="secondary" icon="👤" title="My profile & stats" onClick=${() => go('/profile')} />
+    </div>
+    ${isIOS && !isStandalone && html`<div class="a2hs">
+      <b>📲 Add GIANT TAG to your home screen</b>
+      <div class="small" style="color:#cbd5e1;margin-top:4px">In Safari tap <b>Share</b> (the square with an arrow) → <b>Add to Home Screen</b>. It opens full-screen like a real app.</div>
+    </div>`}
+    ${live.length > 0 && html`<${Section}>Happening now<//>${live.map((r) => html`<${GameRow} row=${r} />`)}`}
+    <${Section}>Previous games<//>
+    ${past.length ? past.map((r) => html`<${GameRow} row=${r} />`) : html`<${Card}><span class="muted">No games yet. Create one and send the code to your friends!</span><//>`}
+  <//>`;
+}
+function GameRow({ row }) {
+  const g = row.games;
+  return html`<div class="list-row tap" onClick=${() => go(gamePath(g))}>
+    <span style="font-size:28px">${MODE_INFO[g.mode].emoji}</span>
+    <div class="grow"><div class="h2 ellipsis">${g.name}</div>
+      <div class="small">${MODE_INFO[g.mode].title} · ${new Date(g.created_at).toLocaleDateString()}${g.location_name ? ' · ' + g.location_name : ''}</div></div>
+    ${g.status === 'finished'
+      ? row.is_winner ? html`<${Pill} color=${C.boundary} text="#000">🏆 WON<//>` : row.final_rank ? html`<${Pill}>#${row.final_rank}<//>` : null
+      : html`<${Pill} color=${g.status === 'lobby' ? C.player : C.it}>${g.status === 'lobby' ? 'IN LOBBY' : 'LIVE'}<//>`}
+  </div>`;
+}
+
+// ====================================================================== SETTINGS FORM (create/edit)
+function SettingsForm({ gameId }) {
+  const d = useStore(draftStore);
+  const set = draftStore.set;
+  return html`<div>
+    <${Field} label="Game name" value=${d.name} onInput=${(name) => set({ name })} maxlength="40" placeholder="Saturday Town Tag" />
+    <${Section}>Game mode<//>
+    <div class="gap8">${Object.keys(MODE_INFO).map((m) => html`
+      <button class=${`mode ${d.mode === m ? 'on' : ''}`} onClick=${() => set({ mode: m })}>
+        <span style="font-size:26px">${MODE_INFO[m].emoji}</span>
+        <div class="grow"><div class="h2">${MODE_INFO[m].title}</div><div class="small">${MODE_INFO[m].blurb}</div></div>
+        <div class="radio"></div>
+      </button>`)}</div>
+
+    <${Section}>Playing area<//>
+    <${Card}>
+      <div class="h2">${d.location_name || 'No location yet'}</div>
+      <div class="muted mt8">${d.boundary.length >= 3 ? `${d.boundary.length}-point boundary · ${areaKm2(d.boundary).toFixed(2)} km² · ${d.safe_zones.length} safe zone(s)` : 'Draw a boundary around your town or play area.'}</div>
+      <${Button} style="margin-top:12px" variant=${d.boundary.length >= 3 ? 'secondary' : 'primary'} icon="🗺️"
+        title=${d.boundary.length >= 3 ? 'Edit boundary & safe zones' : 'Draw boundary'} onClick=${() => go('/boundary' + (gameId ? `?game=${gameId}` : ''))} />
+      <${Toggle} label="Limit maximum game radius" sub="Prevents boundaries that are too big to play" value=${d.max_radius_m != null} onChange=${(v) => set({ max_radius_m: v ? 2000 : null })} />
+      ${d.max_radius_m != null && html`<${Stepper} label="Max radius" value=${d.max_radius_m} step=${250} min=${250} max=${50000} format=${formatDistance} onChange=${(v) => set({ max_radius_m: v })} />`}
+    <//>
+
+    <${Section}>Players & time<//>
+    <${Card}>
+      <${Stepper} label="Max players" value=${d.max_players} min=${2} max=${200} onChange=${(v) => set({ max_players: v })} />
+      <${Stepper} label="Game length" value=${d.duration_seconds} step=${300} min=${300} max=${21600} format=${formatDuration} onChange=${(v) => set({ duration_seconds: v })} />
+      <${Stepper} label="Head start" value=${d.countdown_seconds} step=${15} min=${0} max=${600} format=${(v) => (v ? v + 's' : 'None')} onChange=${(v) => set({ countdown_seconds: v })} />
+      ${d.mode === 'last_standing' && html`<${Stepper} label="New hunter every" value=${d.escalation_interval_seconds} step=${60} min=${60} max=${3600} format=${formatDuration} onChange=${(v) => set({ escalation_interval_seconds: v })} />`}
+      <${Toggle} label="Allow spectators" value=${d.allow_spectators} onChange=${(v) => set({ allow_spectators: v })} />
+      <${Toggle} label="Eliminated players can rejoin" sub="After a 2 minute penalty. Players who leave can also come back." value=${d.allow_rejoin} onChange=${(v) => set({ allow_rejoin: v })} />
+    <//>
+
+    <${Section}>IT radar<//>
+    <${Card}>
+      <div class="muted" style="margin-bottom:8px">How often IT sees where everyone is:</div>
+      <${Segmented} value=${String(d.it_ping_seconds ?? 'live')} onChange=${(v) => set({ it_ping_seconds: v === 'live' ? null : Number(v) })}
+        options=${[{ value: '30', label: '30s' }, { value: '60', label: '1 min' }, { value: '120', label: '2 min' }, { value: '300', label: '5 min' }, { value: 'live', label: 'Live' }]} />
+      <div class="small mt8">At each ping, IT sees every runner and runners see IT. The dots freeze for 10 seconds, then fade away until the next ping, with no notification. Runners always see each other live. (Team Tag is always live.)</div>
+    <//>
+
+    <${Section}>Tagging rules<//>
+    <${Card}>
+      <${Stepper} label="Tag distance" value=${d.tag_radius_m} step=${5} min=${5} max=${200} format=${(v) => v + ' m'} onChange=${(v) => set({ tag_radius_m: v })} />
+      <div class="small">Phone GPS is only accurate to a few metres, so keep this at 15 m or more.</div>
+      ${d.mode === 'classic' && html`<${Stepper} label="No tag-backs for" value=${d.tag_back_cooldown_seconds} step=${15} min=${0} max=${600} format=${(v) => (v ? v + 's' : 'Off')} onChange=${(v) => set({ tag_back_cooldown_seconds: v })} />`}
+      <${Stepper} label="Time to confirm a tag" value=${d.tag_confirm_timeout_seconds} step=${10} min=${10} max=${600} format=${(v) => v + 's'} onChange=${(v) => set({ tag_confirm_timeout_seconds: v })} />
+      <div class="small">Unconfirmed tags go to the host to decide.</div>
+    <//>
+
+    <${Section}>No vehicles<//>
+    <${Card}>
+      <${Toggle} label="Speed limit" sub="Going faster than this (car, bike…) gets a warning, then you become IT." value=${d.speed_limit_mph != null} onChange=${(v) => set({ speed_limit_mph: v ? 18 : null })} />
+      ${d.speed_limit_mph != null && html`
+        <${Stepper} label="Max speed" value=${d.speed_limit_mph} min=${8} max=${40} format=${(v) => v + ' mph'} onChange=${(v) => set({ speed_limit_mph: v })} />
+        <${Stepper} label="Warning time" value=${d.speed_grace_seconds} step=${5} min=${0} max=${120} format=${(v) => (v ? v + 's' : 'Instant')} onChange=${(v) => set({ speed_grace_seconds: v })} />
+        <div class="small">Fast sprinters top out around 15 mph, so 15–20 mph catches vehicles without punishing runners. If IT is caught speeding, they're frozen for 60s instead.</div>`}
+    <//>
+
+    <${Section}>Out of bounds<//>
+    <${Card}>
+      <div class="muted" style="margin-bottom:8px">If someone stays outside the boundary:</div>
+      <${Segmented} value=${d.out_of_bounds_action} onChange=${(v) => set({ out_of_bounds_action: v })}
+        options=${[{ value: 'become_it', label: 'Become IT' }, { value: 'warn', label: 'Warn' }, { value: 'pause', label: 'Freeze' }, { value: 'disqualify', label: 'Out' }]} />
+      <${Stepper} label="GPS grace period" value=${d.grace_seconds} step=${5} min=${0} max=${300} format=${(v) => v + 's'} onChange=${(v) => set({ grace_seconds: v })} />
+      <div class="small">Players are warned the moment they leave. The penalty only applies if they're still out after the grace period.</div>
+    <//>
+
+    <${Section}>Privacy<//>
+    <${Card}>
+      <${Stepper} label="Keep route history" value=${d.location_retention_hours} step=${6} min=${0} max=${720} format=${(v) => (v ? v + ' h' : 'Delete at end')} onChange=${(v) => set({ location_retention_hours: v })} />
+      <div class="small">Live locations are always deleted when the game ends.</div>
+    <//>
+  </div>`;
+}
+
+function CreateGame() {
+  const [busy, setBusy] = useState(false);
+  const create = async () => {
+    const d = draftStore.get();
+    if (!d.name.trim()) return toast({ title: 'Give your game a name', tone: 'warning' });
+    if (d.boundary.length < 3) return toast({ title: 'Draw a boundary first', tone: 'warning' });
+    setBusy(true);
+    try { const id = await rpc('create_game', { settings: d }); replace(`/g/${id}/lobby`); }
+    catch (e) { toast({ title: 'Could not create game', body: e.message, tone: 'danger' }); }
+    finally { setBusy(false); }
+  };
+  return html`<${Screen}><${Header} title="Create game" /><${SettingsForm} />
+    <${Button} big variant="it" icon="🚩" title="CREATE LOBBY" loading=${busy} onClick=${create} style="margin-top:28px" /><//>`;
+}
+
+function EditGame({ id }) {
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    try { await rpc('update_game_settings', { g: id, settings: draftStore.get() }); back(`/g/${id}/lobby`); }
+    catch (e) { toast({ title: 'Could not save', body: e.message, tone: 'danger' }); }
+    finally { setBusy(false); }
+  };
+  return html`<${Screen}><${Header} title="Game settings" /><${SettingsForm} gameId=${id} />
+    <${Button} big variant="it" title="SAVE SETTINGS" loading=${busy} onClick=${save} style="margin-top:28px" /><//>`;
+}
+
+// ====================================================================== BOUNDARY EDITOR
+function BoundaryEditor({ gameId }) {
+  const draft = draftStore.get();
+  const ref = useRef();
+  const map = useLeafletMap(ref, { bounds: draft.boundary, zoom: 15 });
+  const [points, setPoints] = useState(draft.boundary);
+  const [zones, setZones] = useState(draft.safe_zones);
+  const [name, setName] = useState(draft.location_name || '');
+  const [hist, setHist] = useState([]);
+  const [mode, setMode] = useState('draw');
+  const [sel, setSel] = useState(null);
+  const [selZone, setSelZone] = useState(null);
+  const [zoneR, setZoneR] = useState(40);
+  const [q, setQ] = useState('');
+  const [searching, setSearching] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [savedOpen, setSavedOpen] = useState(false);
+  const [saveAsOpen, setSaveAsOpen] = useState(false);
+  const layers = useRef(null);
+  const st = useRef({}); st.current = { points, zones, mode, sel, selZone, zoneR };
+
+  const snapshot = () => setHist((h) => [...h.slice(-30), { points: st.current.points, zones: st.current.zones }]);
+
+  // Start at the user's location if there's no boundary yet
+  useEffect(() => {
+    if (!map || draft.boundary.length) return;
+    navigator.geolocation?.getCurrentPosition((p) => map.setView([p.coords.latitude, p.coords.longitude], 15), () => {}, { timeout: 8000 });
+  }, [map]);
+
+  useEffect(() => {
+    if (!map) return;
+    layers.current = L.layerGroup().addTo(map);
+    map.on('click', (e) => {
+      const s = st.current;
+      if (s.sel !== null || s.selZone) { setSel(null); setSelZone(null); return; }
+      snapshot();
+      const c = fromLL(e.latlng);
+      if (s.mode === 'draw') setPoints((p) => [...p, c]);
+      else setZones((z) => [...z, { id: Math.random().toString(36).slice(2, 10), name: `Safe zone ${z.length + 1}`, radius: s.zoneR, ...c }]);
+    });
+  }, [map]);
+
+  // Redraw
+  const maxR = draft.max_radius_m;
+  const centre = useMemo(() => centroid(points), [points]);
+  const tooBig = maxR != null && points.length >= 3 && maxDistanceFromCentre(points) > maxR;
+  useEffect(() => {
+    if (!map || !layers.current) return;
+    const g = layers.current; g.clearLayers();
+    if (points.length >= 3) L.polygon(points.map(toLL), { color: tooBig ? C.danger : C.boundary, weight: 4, fillOpacity: 0.1, interactive: false }).addTo(g);
+    else if (points.length === 2) L.polyline(points.map(toLL), { color: C.boundary, weight: 4, interactive: false }).addTo(g);
+    if (maxR != null && centre && points.length >= 3) L.circle(toLL(centre), { radius: maxR, color: '#fff', weight: 1.5, opacity: 0.4, dashArray: '8 8', fill: false, interactive: false }).addTo(g);
+    points.forEach((p, i) => {
+      const m = L.marker(toLL(p), { draggable: true, icon: L.divIcon({ className: '', html: `<div class="vertex ${sel === i ? 'sel' : ''}">${i + 1}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }) }).addTo(g);
+      m.on('click', (e) => { L.DomEvent.stopPropagation(e); setSel(i); setSelZone(null); });
+      m.on('dragstart', snapshot);
+      m.on('dragend', () => { const c = fromLL(m.getLatLng()); setPoints((pts) => pts.map((x, j) => (j === i ? c : x))); });
+    });
+    zones.forEach((z) => {
+      L.circle(toLL(z), { radius: z.radius, color: C.safe, weight: 2, fillOpacity: 0.18, interactive: false }).addTo(g);
+      const m = L.marker(toLL(z), { draggable: true, icon: L.divIcon({ className: '', html: `<div class="safe-mk ${selZone === z.id ? 'sel' : ''}">🛡️</div>`, iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(g);
+      m.on('click', (e) => { L.DomEvent.stopPropagation(e); setSelZone(z.id); setSel(null); });
+      m.on('dragstart', snapshot);
+      m.on('dragend', () => { const c = fromLL(m.getLatLng()); setZones((zs) => zs.map((x) => (x.id === z.id ? { ...x, ...c } : x))); });
+    });
+  }, [map, points, zones, sel, selZone, tooBig]);
+
+  const search = async () => {
+    if (!q.trim()) return;
+    setSearching(true);
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q.trim())}`).then((x) => x.json());
+      if (!r.length) return toast({ title: `Couldn't find "${q}"`, body: 'Try adding a state or country.', tone: 'warning' });
+      const b = r[0].boundingbox?.map(Number);
+      if (b) map.fitBounds([[b[0], b[2]], [b[1], b[3]]], { maxZoom: 16 }); else map.setView([+r[0].lat, +r[0].lon], 15);
+      if (!name) setName(q.trim());
+      document.activeElement?.blur();
+    } catch (e) { toast({ title: 'Search failed', body: errorMessage(e), tone: 'danger' }); }
+    finally { setSearching(false); }
+  };
+  const locate = () => navigator.geolocation?.getCurrentPosition(
+    (p) => map.setView([p.coords.latitude, p.coords.longitude], 16),
+    () => toast({ title: 'Allow location access to jump to where you are', tone: 'warning' }), { enableHighAccuracy: true, timeout: 10000 });
+  const undo = () => { const last = hist[hist.length - 1]; if (!last) return; setPoints(last.points); setZones(last.zones); setHist((h) => h.slice(0, -1)); setSel(null); setSelZone(null); };
+  const reset = () => { if (confirm('Clear all boundary points and safe zones?')) { snapshot(); setPoints([]); setZones([]); setSel(null); } };
+  const insertAfter = () => {
+    if (sel === null || points.length < 2) return; snapshot();
+    const a = points[sel], b = points[(sel + 1) % points.length];
+    const next = [...points]; next.splice(sel + 1, 0, { latitude: (a.latitude + b.latitude) / 2, longitude: (a.longitude + b.longitude) / 2 });
+    setPoints(next); setSel(sel + 1);
+  };
+  const delSel = () => { if (sel === null) return; snapshot(); setPoints((p) => p.filter((_, i) => i !== sel)); setSel(null); };
+  const zoneSel = zones.find((z) => z.id === selZone);
+  const resizeZone = (d) => setZones((zs) => zs.map((x) => (x.id === selZone ? { ...x, radius: Math.min(500, Math.max(10, x.radius + d)) } : x)));
+
+  const done = async () => {
+    if (points.length > 0 && points.length < 3) return toast({ title: 'A boundary needs at least 3 points', tone: 'warning' });
+    if (tooBig) return toast({ title: `Boundary must fit within ${formatDistance(maxR)} radius`, tone: 'warning' });
+    let locName = name.trim() || null;
+    if (!locName && centre) {
+      try {
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&zoom=14&lat=${centre.latitude}&lon=${centre.longitude}`).then((x) => x.json());
+        const a = r.address || {};
+        locName = [a.city || a.town || a.village || a.suburb || a.county, a.state].filter(Boolean).join(', ') || null;
+      } catch {}
+    }
+    const patch = { boundary: points, safe_zones: zones, location_name: locName };
+    draftStore.set(patch);
+    if (gameId) {
+      setSaving(true);
+      try { await rpc('update_game_settings', { g: gameId, settings: patch }); }
+      catch (e) { setSaving(false); return toast({ title: 'Could not save', body: e.message, tone: 'danger' }); }
+      setSaving(false);
+    }
+    back();
+  };
+
+  const loadSaved = (b) => {
+    snapshot(); setPoints(b.points); setZones(b.safe_zones || []); if (b.location_name) setName(b.location_name); setSavedOpen(false);
+    if (b.points.length) map.fitBounds(L.latLngBounds(b.points.map(toLL)), { padding: [40, 40] });
+  };
+
+  return html`<div class="full">
+    <div class="map" ref=${ref}></div>
+    <div class="hud-top">
+      <div class="row">
+        <button class="round glass" onClick=${() => back()}>✕</button>
+        <div class="search glass">
+          <span>🔎</span>
+          <input value=${q} onInput=${(e) => setQ(e.target.value)} placeholder="Search a town, city or address" enterkeyhint="search"
+            onKeyDown=${(e) => e.key === 'Enter' && search()} />
+          ${searching && html`<div class="spinner" style="width:18px;height:18px;border-width:2px"></div>`}
+        </div>
+      </div>
+      <div class="pills">
+        <span class="pill">${points.length} points</span>
+        ${points.length >= 3 && html`<span class="pill">${areaKm2(points).toFixed(2)} km²</span>`}
+        ${zones.length > 0 && html`<span class="pill">🛡️ ${zones.length} safe</span>`}
+        ${tooBig && html`<span class="pill" style="background:var(--danger)">Exceeds max radius</span>`}
+      </div>
+      <div class="tip glass">${mode === 'draw' ? (sel !== null ? 'Drag the point to move it, or use the buttons below.' : 'Tap the map to add boundary points. Drag points to adjust.') : 'Tap the map to drop a safe zone. Players inside can’t be tagged.'}</div>
+    </div>
+    <div class="side-btns" style="position:absolute;right:12px;top:calc(var(--st) + 160px);z-index:1000">
+      <button class="round glass" onClick=${locate} title="My location">📍</button>
+      <button class="round glass" onClick=${undo} disabled=${!hist.length} style=${{ opacity: hist.length ? 1 : 0.35 }}>↩️</button>
+      <button class="round glass" onClick=${reset}>🗑️</button>
+      <button class="round glass" onClick=${() => setSavedOpen(true)} title="Load saved">📂</button>
+      <button class="round glass" onClick=${() => points.length >= 3 && setSaveAsOpen(true)} style=${{ opacity: points.length >= 3 ? 1 : 0.35 }} title="Save for later">🔖</button>
+    </div>
+    <div class="editor-bottom glass">
+      ${sel !== null && html`<div class="row" style="margin-bottom:10px">
+        <b class="grow">Point ${sel + 1}</b>
+        <${Button} inline variant="secondary" title="+ Insert after" onClick=${insertAfter} />
+        <${Button} inline variant="danger" title="Delete" onClick=${delSel} />
+      </div>`}
+      ${zoneSel && html`<div class="row" style="margin-bottom:10px">
+        <b class="grow">Safe zone · ${zoneSel.radius} m</b>
+        <${Button} inline variant="secondary" title="−" onClick=${() => resizeZone(-10)} />
+        <${Button} inline variant="secondary" title="+" onClick=${() => resizeZone(10)} />
+        <${Button} inline variant="danger" title="Delete" onClick=${() => { snapshot(); setZones((zs) => zs.filter((x) => x.id !== selZone)); setSelZone(null); }} />
+      </div>`}
+      <div class="mode-row">
+        <button class=${mode === 'draw' ? 'b-on' : ''} onClick=${() => setMode('draw')}>〰️ Boundary</button>
+        <button class=${mode === 'safe' ? 's-on' : ''} onClick=${() => setMode('safe')}>🛡️ Safe zones</button>
+      </div>
+      ${mode === 'safe' && html`<div class="row" style="margin-bottom:10px">
+        <span class="muted grow">New zone radius: ${zoneR} m</span>
+        <${Button} inline variant="secondary" title="−" onClick=${() => setZoneR((r) => Math.max(10, r - 10))} />
+        <${Button} inline variant="secondary" title="+" onClick=${() => setZoneR((r) => Math.min(500, r + 10))} />
+      </div>`}
+      <${Field} value=${name} onInput=${setName} maxlength="60" placeholder="Area name (e.g. Springfield downtown)" />
+      <${Button} big variant="it" icon="✅" title=${gameId ? 'SAVE BOUNDARY' : 'USE THIS BOUNDARY'} loading=${saving} onClick=${done} />
+    </div>
+    <${SavedBoundaries} open=${savedOpen} onClose=${() => setSavedOpen(false)} onPick=${loadSaved} />
+    <${SaveAs} open=${saveAsOpen} onClose=${() => setSaveAsOpen(false)} points=${points} zones=${zones} locName=${name} />
+  </div>`;
+}
+
+function SavedBoundaries({ open, onClose, onPick }) {
+  const [items, setItems] = useState(null);
+  useEffect(() => { if (open) supabase.from('saved_boundaries').select('*').order('created_at', { ascending: false }).then(({ data }) => setItems(data || [])); }, [open]);
+  const del = async (id, e) => { e.stopPropagation(); await supabase.from('saved_boundaries').delete().eq('id', id); setItems((x) => x.filter((b) => b.id !== id)); };
+  return html`<${Sheet} open=${open} onClose=${onClose} title="Saved boundaries">
+    ${items === null ? html`<div class="spinner"></div>` : items.length === 0 ? html`<div class="muted">Nothing saved yet. Use 🔖 to save a boundary.</div>` :
+      items.map((b) => html`<div class="list-row tap" onClick=${() => onPick(b)}>
+        <div class="grow"><b>${b.name}</b><div class="small">${b.points.length} points · ${areaKm2(b.points).toFixed(2)} km² · ${(b.safe_zones || []).length} safe zones</div></div>
+        <button onClick=${(e) => del(b.id, e)}>🗑️</button></div>`)}
+    <${Button} variant="secondary" title="Close" onClick=${onClose} style="margin-top:12px" />
+  <//>`;
+}
+function SaveAs({ open, onClose, points, zones, locName }) {
+  const [n, setN] = useState(locName);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (open) setN(locName); }, [open]);
+  const save = async () => {
+    if (!n.trim()) return; setBusy(true);
+    const { error } = await supabase.from('saved_boundaries').insert({ name: n.trim().slice(0, 40), points, safe_zones: zones, location_name: locName || null });
+    setBusy(false);
+    if (error) return toast({ title: 'Could not save', body: error.message, tone: 'danger' });
+    toast({ title: 'Boundary saved for future games', tone: 'success' }); onClose();
+  };
+  return html`<${Sheet} open=${open} onClose=${onClose} title="Save boundary for later">
+    <${Field} value=${n} onInput=${setN} placeholder="Name" maxlength="40" /><${Button} variant="it" title="Save" loading=${busy} onClick=${save} />
+  <//>`;
+}
+
+// ====================================================================== JOIN
+function Join({ code: initial }) {
+  const [code, setCode] = useState((initial || '').toUpperCase());
+  const [busy, setBusy] = useState(null);
+  const auto = useRef(false);
+  const join = async (spectator = false) => {
+    const c = code.trim().toUpperCase();
+    if (c.length !== 6) return toast({ title: 'Game codes are 6 characters', tone: 'warning' });
+    setBusy(spectator ? 's' : 'p');
+    try { const id = await rpc('join_game', { join_code: c, as_spectator: spectator }); replace(`/g/${id}/lobby`); }
+    catch (e) { toast({ title: 'Could not join', body: e.message, tone: 'danger' }); }
+    finally { setBusy(null); }
+  };
+  useEffect(() => { if (initial && !auto.current) { auto.current = true; join(false); } }, []);
+  return html`<${Screen}>
+    <${Header} title="Join game" onBack=${() => replace('/home')} />
+    <p class="muted" style="text-align:center;margin-top:20px">Enter the code from the host</p>
+    <input class="code-input" value=${code} maxlength="6" autocapitalize="characters" autocorrect="off" autocomplete="off" placeholder="ABC123"
+      onInput=${(e) => setCode(e.target.value.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 6))} onKeyDown=${(e) => e.key === 'Enter' && join()} />
+    <${Button} big variant="it" icon="🎟️" title="JOIN" loading=${busy === 'p'} onClick=${() => join(false)} />
+    <${Button} variant="secondary" icon="👀" title="Watch as spectator" loading=${busy === 's'} onClick=${() => join(true)} style="margin-top:12px" />
+    <p class="small mt24">Spectators watch the live map without sharing their location. Games that already started can only be joined as a spectator.</p>
+  <//>`;
+}
+
+// ====================================================================== LOBBY
+const OOB_LABEL = { become_it: 'Become IT', warn: 'Warning only', pause: 'Freeze', disqualify: 'Disqualified' };
+function Lobby({ id }) {
+  const { profile } = useStore(authStore);
+  const g = useGame(id, (e) => {
+    if (e.kind === 'kicked') { toast({ title: 'The host removed you from the lobby', tone: 'danger' }); replace('/home'); }
+    else if (['join', 'leave', 'rejoin'].includes(e.kind)) toast({ title: e.title, tone: 'info' });
+  });
+  const [busy, setBusy] = useState(null);
+  const [consent, setConsent] = useState(false);
+  const [menuFor, setMenuFor] = useState(null);
+  const game = g.game;
+  const me = g.playerOf(profile?.id);
+  const isHost = game?.host_id === profile?.id;
+
+  useEffect(() => {
+    if (!game) return;
+    if (['countdown', 'active', 'paused', 'finished'].includes(game.status)) replace(gamePath(game));
+    else if (game.status === 'cancelled') { toast({ title: 'The host closed this lobby', tone: 'warning' }); replace('/home'); }
+  }, [game?.status]);
+
+  if (g.loading || !game) return html`<${Loading} label=${g.error || 'Loading lobby…'} />`;
+
+  const players = g.players.filter((p) => p.role === 'player' && !p.left_at);
+  const spectators = g.players.filter((p) => p.role === 'spectator' && !p.left_at);
+  const ready = players.filter((p) => p.is_ready || p.user_id === game.host_id).length;
+  const canStart = players.length >= 2 && ready === players.length && game.boundary.length >= 3;
+  const invite = `${location.origin}${location.pathname}#/join?code=${game.code}`;
+
+  const run = async (k, fn) => { setBusy(k); try { await fn(); } catch (e) { toast({ title: e.message, tone: 'danger' }); } finally { setBusy(null); } };
+  const share = async () => {
+    const text = `Join my GIANT TAG game "${game.name}"! Code: ${game.code}`;
+    if (navigator.share) { try { await navigator.share({ title: 'GIANT TAG', text, url: invite }); } catch {} }
+    else { await navigator.clipboard?.writeText(`${text}\n${invite}`); toast({ title: 'Invite link copied', tone: 'success' }); }
+  };
+  const toggleReady = () => {
+    if (!me.is_ready && !me.consented_at) return setConsent(true);
+    run('ready', () => rpc('set_ready', { g: game.id, ready: !me.is_ready }));
+  };
+  const accept = () => {
+    setConsent(false);
+    navigator.geolocation.getCurrentPosition(
+      () => run('ready', () => rpc('set_ready', { g: game.id, ready: true, location_consent: true })),
+      () => toast({ title: 'Location is blocked', body: 'iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using.', tone: 'danger' }),
+      { enableHighAccuracy: true, timeout: 15000 });
+  };
+  const leave = () => {
+    if (!confirm(isHost ? 'Cancel this game for everyone?' : 'Leave this lobby?')) return;
+    run('leave', async () => { await rpc('leave_game', { g: game.id }); replace('/home'); });
+  };
+  const startingIt = game.starting_it_id ? g.profileOf(game.starting_it_id)?.username : null;
+
+  return html`<${Screen}>
+    <${Header} title="Lobby" onBack=${() => replace('/home')} right=${html`<button class="icon-btn" onClick=${leave} title="Leave">🚪</button>`} />
+    <h1 class="h1" style="text-align:center">${game.name}</h1>
+    <p class="muted" style="text-align:center;margin:4px 0 0">${MODE_INFO[game.mode].emoji} ${MODE_INFO[game.mode].title} · hosted by ${g.profileOf(game.host_id)?.username}</p>
+    <div class="code-box" onClick=${() => { navigator.clipboard?.writeText(game.code); toast({ title: 'Code copied', tone: 'success' }); }}>
+      <div class="small">GAME CODE · tap to copy</div><div class="code-big">${game.code}</div>
+    </div>
+    <${Button} variant="secondary" icon="📤" title="Invite friends" onClick=${share} />
+    ${game.boundary.length >= 3 && html`<${MiniMap} game=${game} />`}
+
+    <${Section} right=${html`<${Pill} color=${canStart ? C.success : C.card2} text=${canStart ? '#000' : '#fff'}>${ready}/${players.length} ready<//>`}>Players · ${players.length}/${game.max_players}<//>
+    ${players.map((p) => {
+      const r = p.is_ready || p.user_id === game.host_id;
+      return html`<div class="list-row tap" onClick=${() => isHost && p.user_id !== profile.id && setMenuFor(p)}>
+        <${Avatar} profile=${p.profile} size=${42} ring=${p.user_id === profile?.id ? C.me : null} />
+        <div class="grow"><b>${p.profile?.username}${p.user_id === profile?.id ? ' (you)' : ''}</b>
+          <div class="small">${p.user_id === game.host_id ? '👑 Host' : 'Player'}${game.starting_it_id === p.user_id ? ' · 🔴 Starts as IT' : ''}</div></div>
+        <${Pill} color=${r ? C.success : C.card2} text=${r ? '#000' : C.muted}>${r ? 'READY' : 'NOT READY'}<//>
+      </div>`;
+    })}
+    ${spectators.length > 0 && html`<div class="small mt8">👀 Spectators: ${spectators.map((s) => s.profile?.username).join(', ')}</div>`}
+
+    <${Section} right=${isHost && html`<button style="color:var(--player);font-weight:700" onClick=${() => { draftStore.replace(settingsOf(game)); go(`/g/${game.id}/edit`); }}>Edit</button>`}>Game settings<//>
+    <${Card}>
+      ${[
+        ['Duration', formatDuration(game.duration_seconds)],
+        ['Head start', game.countdown_seconds ? game.countdown_seconds + 's' : 'None'],
+        game.mode !== 'team' && ['Starting IT', startingIt || 'Random'],
+        ['Tag distance', game.tag_radius_m + ' m'],
+        game.mode !== 'team' && ['IT ↔ runners', game.it_ping_seconds ? `Ping every ${game.it_ping_seconds >= 60 ? game.it_ping_seconds / 60 + ' min' : game.it_ping_seconds + 's'}` : 'Live'],
+        ['Speed limit', game.speed_limit_mph ? `${game.speed_limit_mph} mph → become IT` : 'Off'],
+        ['Out of bounds', `${OOB_LABEL[game.out_of_bounds_action]} after ${game.grace_seconds}s`],
+        ['Safe zones', String(game.safe_zones.length)],
+        ['Rejoin', game.allow_rejoin ? 'Allowed' : 'Off'],
+      ].filter(Boolean).map(([k, v]) => html`<div class="row" style="justify-content:space-between;padding:3px 0"><span class="muted">${k}</span><b>${v}</b></div>`)}
+    <//>
+
+    <div class="gap12 mt24">
+      ${me?.role === 'player' && !isHost && html`<${Button} big variant=${me.is_ready ? 'secondary' : 'success'} icon=${me.is_ready ? '✋' : '✅'}
+        title=${me.is_ready ? "I'M NOT READY" : "I'M READY"} loading=${busy === 'ready'} onClick=${toggleReady} />`}
+      ${isHost && html`
+        <${Button} big variant="it" icon="▶" title="START GAME" disabled=${!canStart} loading=${busy === 'start'}
+          onClick=${() => { if (!me.consented_at && !confirm('Start the game? Your location will be shared with the players in this game until it ends.')) return; run('start', () => rpc('start_game', { g: game.id })); }} />
+        ${!canStart && html`<p class="small" style="text-align:center">${players.length < 2 ? 'Waiting for at least one more player…' : game.boundary.length < 3 ? 'Draw a boundary first (Edit).' : 'Waiting for everyone to be ready…'}</p>`}`}
+      ${me?.role === 'spectator' && html`<p class="muted" style="text-align:center">You're spectating. Sit tight until the host starts.</p>`}
+    </div>
+
+    <${Modal} open=${consent}>
+      <div style="font-size:40px;text-align:center">📍</div>
+      <h2 class="h2" style="text-align:center;margin:8px 0">Share your location for this game?</h2>
+      <div class="muted" style="line-height:1.6">
+        • Only the people in “${game.name}” can see you.<br/>
+        • Sharing starts when the game starts and stops when it ends or you leave.<br/>
+        • A green LIVE badge shows whenever you're sharing.<br/>
+        • Keep GIANT TAG open on screen during the game. Your phone can't share location while locked.
+      </div>
+      <${Button} variant="success" title="I agree, I'm ready" onClick=${accept} style="margin-top:18px" />
+      <${Button} variant="ghost" title="Not now" onClick=${() => setConsent(false)} style="margin-top:6px" />
+    <//>
+    <${Sheet} open=${!!menuFor} onClose=${() => setMenuFor(null)} title=${menuFor?.profile?.username}>
+      <div class="gap8">
+        <${Button} variant="secondary" title="🔴 Make starting IT" onClick=${() => { const p = menuFor; setMenuFor(null); run('menu', () => rpc('update_game_settings', { g: game.id, settings: { starting_it_id: p.user_id } })); }} />
+        <${Button} variant="danger" title="Remove from lobby" onClick=${() => { const p = menuFor; setMenuFor(null); run('menu', () => rpc('kick_player', { g: game.id, target: p.user_id })); }} />
+      </div>
+    <//>
+  <//>`;
+}
+
+function MiniMap({ game }) {
+  const ref = useRef();
+  const map = useLeafletMap(ref, { bounds: game.boundary, interactive: false });
+  useEffect(() => {
+    if (!map) return;
+    const g = L.layerGroup().addTo(map);
+    L.polygon(game.boundary.map(toLL), { color: C.boundary, weight: 3, fillOpacity: 0.1 }).addTo(g);
+    game.safe_zones.forEach((z) => L.circle(toLL(z), { radius: z.radius, color: C.safe, weight: 2, fillOpacity: 0.18 }).addTo(g));
+    map.fitBounds(L.latLngBounds(game.boundary.map(toLL)), { padding: [20, 20] });
+    return () => g.remove();
+  }, [map, game.boundary, game.safe_zones]);
+  return html`<div class="mini-map"><div class="map" ref=${ref}></div>
+    <div class="mini-label">📍 ${game.location_name || 'Playing area'} · ${areaKm2(game.boundary).toFixed(2)} km²</div></div>`;
+}
+
+// ====================================================================== PLAYERS
+function Players({ id }) {
+  const { profile } = useStore(authStore);
+  const g = useGame(id);
+  const now = useNow(1000);
+  const game = g.game;
+  if (g.loading || !game) return html`<${Loading} />`;
+  const rows = g.players.map((p) => ({ p, st: playerState(p, g.locations[p.user_id], game, now) }));
+  const sections = [
+    [game.mode === 'classic' ? 'IT' : 'IT team', rows.filter((x) => x.st === 'it')],
+    ['Active players', rows.filter((x) => x.st === 'active' || x.st === 'inactive')],
+    ['Eliminated', rows.filter((x) => x.st === 'eliminated')],
+    ['Spectators', rows.filter((x) => x.st === 'spectator')],
+    ['Left the game', rows.filter((x) => x.st === 'left')],
+  ].filter(([, r]) => r.length);
+  return html`<${Screen}>
+    <${Header} title=${`Players · ${g.players.filter((p) => p.role === 'player' && !p.left_at).length}`} />
+    ${sections.map(([title, list]) => html`<${Section}>${title} · ${list.length}<//>
+      ${list.map(({ p, st }) => {
+        const ring = st === 'it' ? C.it : p.user_id === profile?.id ? C.me : game.mode === 'team' && p.team ? TEAM_INFO[p.team].color : null;
+        return html`<div class="list-row" style=${st === 'it' ? { borderColor: C.it } : null}>
+          <${Avatar} profile=${p.profile} size=${46} ring=${ring} dim=${['eliminated', 'left', 'inactive'].includes(st)} />
+          <div class="grow"><b>${p.profile?.username}${p.user_id === profile?.id ? ' (you)' : ''}${p.user_id === game.host_id ? ' 👑' : ''}</b>
+            <div class="small">${STATE_LABEL[st]}${p.role === 'player' && game.started_at ? ` · survived ${formatDuration(survivalSeconds(p, game, now))}` : ''}${p.tags_count ? ` · ${p.tags_count} tags` : ''}${st === 'inactive' ? ` · last seen ${timeAgo(g.locations[p.user_id]?.updated_at || p.last_seen_at, now)}` : ''}</div>
+            ${(p.is_out_of_bounds || p.speed_warnings > 0) && html`<div class="small" style="color:var(--warning)">${p.is_out_of_bounds ? '🚧 Out of bounds ' : ''}${p.speed_warnings ? `🚗 ${p.speed_warnings} speed warning(s)` : ''}</div>`}
+          </div>
+          ${st === 'it' && html`<${Pill} color=${C.it}>IT<//>`}
+          ${game.mode === 'team' && p.team && html`<${Pill} color=${TEAM_INFO[p.team].color}>${TEAM_INFO[p.team].name.split(' ')[1]}<//>`}
+        </div>`;
+      })}`)}
+  <//>`;
+}
+
+// ====================================================================== RESULTS
+const KIND_VERB = { transfer: 'tagged', infect: 'infected', eliminate: 'eliminated', capture: 'captured' };
+function Results({ id }) {
+  const { profile } = useStore(authStore);
+  const g = useGame(id);
+  const [trail, setTrail] = useState([]);
+  const ref = useRef();
+  useEffect(() => {
+    if (!profile) return;
+    supabase.from('location_history').select('latitude, longitude').eq('game_id', id).eq('user_id', profile.id).order('recorded_at')
+      .then(({ data }) => setTrail(data || []));
+  }, [id, profile?.id]);
+  const game = g.game;
+  if (g.loading || !game) return html`<${Loading} />`;
+
+  const ranked = g.players.filter((p) => p.role === 'player').sort((a, b) => (a.final_rank ?? 999) - (b.final_rank ?? 999));
+  const winners = ranked.filter((p) => p.is_winner);
+  const me = ranked.find((p) => p.user_id === profile?.id);
+  const tags = g.history.filter((h) => KIND_VERB[h.kind]);
+  const longest = [...ranked].sort((a, b) => (b.survival_seconds || 0) - (a.survival_seconds || 0))[0];
+  const duration = game.started_at && game.finished_at ? (new Date(game.finished_at) - new Date(game.started_at)) / 1000 - game.paused_seconds : 0;
+  const title = game.status === 'cancelled' ? 'GAME CANCELLED' : game.winning_team ? `${TEAM_INFO[game.winning_team].name.toUpperCase()} WINS!`
+    : winners.length === 1 ? `${(winners[0].profile?.username || '').toUpperCase()} WINS!` : winners.length > 1 ? `${winners.length} WINNERS!` : 'GAME OVER';
+  const share = async () => {
+    const text = `🏃 GIANT TAG — ${game.name}\n${title}\n` + ranked.slice(0, 5).map((p) => `#${p.final_rank} ${p.profile?.username} · ${formatDuration(p.survival_seconds)} survived · ${p.tags_count} tags`).join('\n');
+    if (navigator.share) navigator.share({ text }).catch(() => {}); else { navigator.clipboard?.writeText(text); toast({ title: 'Results copied', tone: 'success' }); }
+  };
+
+  return html`<${Screen}>
+    <div class="center-col" style="margin-top:16px">
+      <div style="color:var(--it);font-size:18px;font-weight:900;font-style:italic;letter-spacing:4px">GAME OVER</div>
+      <div style="font-size:64px;margin-top:8px">🏆</div>
+      <h1 class="h1">${title}</h1>
+      ${me?.is_winner && html`<${Pill} color=${C.boundary} text="#000" style=${{ marginTop: '8px' }}>YOU WON!<//>`}
+      <div class="row mt16">${winners.slice(0, 5).map((w, i) => html`<${Avatar} profile=${w.profile} size=${56} ring=${C.boundary} style=${{ marginLeft: i ? '-22px' : 0 }} />`)}</div>
+      <p class="muted">${MODE_INFO[game.mode].emoji} ${game.name}</p>
+    </div>
+    <div class="stats two mt16">
+      <div class="stat"><div class="v">${formatDuration(duration)}</div><div class="small">Game length</div></div>
+      <div class="stat"><div class="v">${tags.length}</div><div class="small">Total tags</div></div>
+      <div class="stat"><div class="v">${g.history.filter((h) => h.kind !== 'auto_assign').length}</div><div class="small">IT changes</div></div>
+      <div class="stat"><div class="v">${longest ? formatDuration(longest.survival_seconds) : '—'}</div><div class="small">Longest survival${longest ? ' · ' + longest.profile?.username : ''}</div></div>
+    </div>
+    <${Section}>Final rankings<//>
+    ${ranked.map((p) => html`<div class="list-row" style=${p.user_id === profile?.id ? { borderColor: C.me } : null}>
+      <b style="width:34px;color:var(--muted)">#${p.final_rank ?? '–'}</b>
+      <${Avatar} profile=${p.profile} size=${40} />
+      <div class="grow"><b>${p.profile?.username} ${p.is_winner ? '🏆' : ''}</b>
+        <div class="small">${formatDuration(p.survival_seconds)} survived · ${p.tags_count} tags · caught ${p.times_caught}×${game.mode === 'classic' ? ` · ${formatDuration(p.it_total_seconds)} as IT` : ''}${p.left_at ? ' · left early' : ''}</div></div>
+    </div>`)}
+    ${trail.length > 1 && html`<${Section}>Your route<//><${RouteMap} game=${game} trail=${trail} /><div class="small">Only you can see your route.</div>`}
+    ${g.history.length > 0 && html`<${Section}>Tag history<//><${Card}>${g.history.map((h) => html`<div style="padding:4px 0">
+      <span class="small">${new Date(h.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}  </span>
+      ${h.kind === 'auto_assign' ? `${g.profileOf(h.new_it)?.username} started as IT` : h.kind === 'escalation' ? `${g.profileOf(h.new_it)?.username} became a hunter`
+        : h.kind === 'penalty' ? `${g.profileOf(h.new_it)?.username} became IT (penalty)` : `${g.profileOf(h.previous_it)?.username} ${KIND_VERB[h.kind]} ${g.profileOf(h.new_it)?.username}`}
+    </div>`)}<//>`}
+    <div class="gap12 mt24">
+      <${Button} big variant="it" icon="🏠" title="BACK HOME" onClick=${() => replace('/home')} />
+      <${Button} variant="secondary" icon="📤" title="Share results" onClick=${share} />
+    </div>
+  <//>`;
+}
+function RouteMap({ game, trail }) {
+  const ref = useRef();
+  const map = useLeafletMap(ref, { bounds: [...trail, ...game.boundary], interactive: false });
+  useEffect(() => {
+    if (!map) return;
+    L.polygon(game.boundary.map(toLL), { color: C.boundary, weight: 2, fillOpacity: 0.08 }).addTo(map);
+    L.polyline(trail.map(toLL), { color: C.me, weight: 4 }).addTo(map);
+  }, [map]);
+  return html`<div class="mini-map" style="height:220px;margin-top:0"><div class="map" ref=${ref}></div></div>`;
+}
+
+// ====================================================================== PROFILE
+function Profile() {
+  const { profile, session } = useStore(authStore);
+  useEffect(() => { loadProfile(); }, []);
+  if (!profile) return html`<${Loading} />`;
+  const wr = profile.games_played ? Math.round((profile.games_won / profile.games_played) * 100) : 0;
+  const stats = [['Games played', profile.games_played], ['Games won', profile.games_won], ['Win rate', wr + '%'],
+    ['Time survived', formatDuration(profile.total_survival_seconds)], ['Total tags', profile.total_tags], ['Times caught', profile.times_caught]];
+  const signOut = async () => {
+    if (!confirm(session?.user?.is_anonymous ? 'Sign out? Guest players can’t be recovered after signing out.' : 'Sign out?')) return;
+    await supabase.auth.signOut(); replace('/signin');
+  };
+  return html`<${Screen}>
+    <${Header} title="Profile" />
+    <div class="center-col"><${Avatar} profile=${profile} size=${120} ring=${C.me} />
+      <h1 class="h1" style="margin-top:14px">${profile.username}</h1>
+      <div class="muted">${session?.user?.is_anonymous ? 'Guest player' : session?.user?.email} · since ${new Date(profile.created_at).toLocaleDateString()}</div></div>
+    <div class="stats mt24">${stats.map(([l, v]) => html`<div class="stat"><div class="v">${v}</div><div class="small">${l}</div></div>`)}</div>
+    <div class="gap12 mt24">
+      <${Button} variant="secondary" icon="✏️" title="Edit profile" onClick=${() => go('/profile-setup')} />
+      <${Button} variant="danger" title="Sign out" onClick=${signOut} />
+    </div>
+  <//>`;
+}
+
+// ====================================================================== SETTINGS
+function Settings() {
+  const prefs = useStore(prefsStore);
+  const { profile } = useStore(authStore);
+  const [perm, setPerm] = useState('…');
+  useEffect(() => { navigator.permissions?.query({ name: 'geolocation' }).then((p) => setPerm(p.state)).catch(() => setPerm('unknown')); }, []);
+  const leaveAll = async () => {
+    if (!confirm('Stop sharing everywhere? You will leave every game you are in (games you host will end).')) return;
+    const { data } = await supabase.from('game_players').select('game_id, games(host_id, status)').eq('user_id', profile.id).is('left_at', null);
+    for (const r of data || []) {
+      if (!['lobby', 'countdown', 'active', 'paused'].includes(r.games?.status)) continue;
+      await rpc(r.games.host_id === profile.id ? 'end_game' : 'leave_game', { g: r.game_id }).catch(() => {});
+    }
+    toast({ title: 'You are no longer sharing your location', tone: 'success' });
+  };
+  const testLocation = () => navigator.geolocation.getCurrentPosition(
+    (p) => { setPerm('granted'); toast({ title: 'Location works!', body: `Accuracy ±${Math.round(p.coords.accuracy)} m`, tone: 'success' }); },
+    () => { setPerm('denied'); toast({ title: 'Location is blocked', body: 'iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using the App, and turn on Precise Location.', tone: 'danger' }); },
+    { enableHighAccuracy: true, timeout: 15000 });
+  return html`<${Screen}>
+    <${Header} title="Settings" />
+    <${Section}>Profile<//><${Card}>
+      <${LinkRow} icon="👤" label="Edit profile" sub=${profile?.username} onClick=${() => go('/profile-setup')} />
+      <${LinkRow} icon="📊" label="Stats" onClick=${() => go('/profile')} />
+    <//>
+    <${Section}>Alerts<//><${Card}>
+      <${Toggle} label="Nearby player alerts" sub="When IT (or a target) comes within ~120 m" value=${prefs.proximityAlerts} onChange=${(v) => setPref('proximityAlerts', v)} />
+      <${Toggle} label="Vibration" sub="Android only — iPhones don't allow websites to vibrate" value=${prefs.haptics} onChange=${(v) => setPref('haptics', v)} />
+    <//>
+    <${Section}>Location<//><${Card}>
+      <${LinkRow} label="Location permission" value=${perm === 'granted' ? 'Allowed' : perm === 'denied' ? 'Blocked' : 'Not asked'} onClick=${testLocation} />
+      <div class="small" style="padding:8px 0">On iPhone: Settings → Privacy & Security → Location Services → Safari Websites → <b>While Using the App</b>, with <b>Precise Location</b> on. Keep the game open on screen while you play.</div>
+    <//>
+    <${Section}>Map<//><${Card}>
+      <${Segmented} value=${prefs.mapType} onChange=${(v) => setPref('mapType', v)} options=${[{ value: 'dark', label: 'Dark' }, { value: 'streets', label: 'Streets' }, { value: 'satellite', label: 'Satellite' }]} />
+      <${Toggle} label="Show names on map" value=${prefs.showNames} onChange=${(v) => setPref('showNames', v)} />
+      <${Toggle} label="Show GPS accuracy circle" value=${prefs.showAccuracy} onChange=${(v) => setPref('showAccuracy', v)} />
+      <${Toggle} label="Follow my position" value=${prefs.followMe} onChange=${(v) => setPref('followMe', v)} />
+    <//>
+    <${Section}>Privacy<//><${Card}>
+      <div class="muted" style="line-height:1.6">• Your location is only shared during a game you joined and agreed to.<br/>• Only people in that same game can see it.<br/>• Live positions are deleted when the game ends. Only you can see your own route.<br/>• A green LIVE badge shows whenever you're sharing.</div>
+      <${LinkRow} icon="✋" label="Stop sharing & leave all games" onClick=${leaveAll} />
+    <//>
+  <//>`;
+}
+
+// ===== play.js =====
+
+const EVENT_TONE = {
+  you_are_it: 'it', it_changed: 'info', infected: 'info', player_out: 'info', eliminated: 'danger',
+  oob_exit: 'warning', oob_warning: 'warning', oob_paused: 'danger', oob_disqualified: 'danger', oob_return: 'success',
+  speed_warning: 'warning', speed_ok: 'success', penalty: 'danger', freed: 'success', countdown: 'info', started: 'it',
+  paused: 'warning', resumed: 'success', game_over: 'it', three_left: 'warning', escalation: 'warning', dispute: 'warning',
+  tag_disputed: 'warning', tag_overturned: 'info', host_oob: 'warning', host_speed: 'warning', host_penalty: 'warning', host_oob_return: 'info',
+};
+const SILENT = new Set(['join', 'leave', 'tag_request']);
+const NEARBY_M = 120, EDGE_WARN_M = 40;
+
+function Play({ id }) {
+  const onEvent = useCallback((e) => {
+    if (SILENT.has(e.kind)) return;
+    toast({ title: e.title, body: e.body, tone: EVENT_TONE[e.kind] || 'info' });
+    if (e.kind === 'you_are_it') vibrate([0, 300, 100, 300, 100, 300]);
+  }, []);
+  const g = useGame(id, onEvent);
+  if (g.loading || !g.game) return html`<${Loading} label=${g.error || 'Joining the game…'} />`;
+  return html`<${PlayView} id=${id} g=${g} />`;
+}
+
+function PlayView({ id, g }) {
+  const { profile } = useStore(authStore);
+  const prefs = useStore(prefsStore);
+  const now = useNow(1000);
+  const game = g.game;
+  const me = g.playerOf(profile?.id);
+  const sharingEnabled = !!game && !!me && me.role === 'player' && !me.left_at && !!me.consented_at && ['countdown', 'active', 'paused'].includes(game.status);
+  const sharing = useLocationSharing(id, sharingEnabled);
+
+  const [selected, setSelected] = useState(null);
+  const [tagOpen, setTagOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [disputesOpen, setDisputesOpen] = useState(false);
+  const [busy, setBusy] = useState(null);
+
+  // server clock nudges (idempotent)
+  useEffect(() => {
+    if (!game || !['countdown', 'active'].includes(game.status)) return;
+    const t = setInterval(() => rpc('tick_game', { g: game.id }).catch(() => {}), 5000);
+    return () => clearInterval(t);
+  }, [game?.id, game?.status]);
+  useEffect(() => {
+    if (!game) return;
+    if ((game.status === 'countdown' && game.starts_at && new Date(game.starts_at) <= now) ||
+        (game.status === 'active' && game.ends_at && new Date(game.ends_at) <= now)) rpc('tick_game', { g: game.id }).catch(() => {});
+  }, [Math.floor(now / 1000)]);
+  useEffect(() => {
+    if (!game) return;
+    if (['finished', 'lobby'].includes(game.status)) replace(gamePath(game));
+    if (game.status === 'cancelled') replace('/home');
+  }, [game?.status]);
+
+  const myPos = sharing.position || (me ? g.locations[me.user_id] : null) || null;
+  // IT radar: IT only sees runners at each ping
+  const pingMode = !!game.it_ping_seconds && game.mode !== 'team';
+  const viaPing = pingMode && !!me?.is_it && !me.is_eliminated && me.role === 'player';
+  const amRunner = pingMode && !!me && me.role === 'player' && !me.is_it && !me.is_eliminated && !me.left_at;
+  // IT sees runners only at pings; runners see IT only at pings
+  const seesViaPing = (p) => p.user_id !== me?.user_id && ((viaPing && !p.is_it) || (amRunner && p.is_it));
+  const PING_SHOW_MS = 10000; // each ping is visible to IT for 10s, then fades away
+  const pingVisible = (pg) => !!pg && now - new Date(pg.pinged_at).getTime() < PING_SHOW_MS;
+  const locOf = (p) => (seesViaPing(p) ? (pingVisible(g.pings[p.user_id]) ? g.pings[p.user_id] : null) : g.locations[p.user_id]);
+  const nextPing = pingMode && game.last_ping_at && game.status === 'active'
+    ? Math.max(0, game.it_ping_seconds - (now - new Date(game.last_ping_at).getTime()) / 1000) : null;
+
+  // ---------- map
+  const mapRef = useRef();
+  const map = useLeafletMap(mapRef, { bounds: game?.boundary?.length ? game.boundary : undefined });
+  const layers = useRef(null);
+  const markers = useRef(new Map());
+  const fitted = useRef(false);
+  useEffect(() => {
+    if (!map) return;
+    layers.current = { static: L.layerGroup().addTo(map), dyn: L.layerGroup().addTo(map), players: L.layerGroup().addTo(map) };
+    map.on('click', () => setSelected(null));
+    map.on('dragstart', () => prefsStore.get().followMe && setPref('followMe', false));
+  }, [map]);
+  useEffect(() => {
+    if (!map || !layers.current || !game) return;
+    const s = layers.current.static; s.clearLayers();
+    if (game.boundary.length >= 3) {
+      L.polygon(game.boundary.map(toLL), { color: C.boundary, weight: 4, fillOpacity: 0.08, interactive: false }).addTo(s);
+      if (!fitted.current) { map.fitBounds(L.latLngBounds(game.boundary.map(toLL)), { padding: [20, 20] }); fitted.current = true; }
+    }
+    game.safe_zones.forEach((z) => {
+      L.circle(toLL(z), { radius: z.radius, color: C.safe, weight: 2, fillOpacity: 0.18, interactive: false }).addTo(s);
+      L.marker(toLL(z), { interactive: false, icon: L.divIcon({ className: '', html: '<div class="safe-mk">🛡️</div>', iconSize: [30, 30], iconAnchor: [15, 15] }) }).addTo(s);
+    });
+  }, [map, game?.boundary, game?.safe_zones]);
+
+  const iAmTagger = isTagger(me, game);
+  // dynamic: accuracy + tag radius
+  useEffect(() => {
+    if (!map || !layers.current) return;
+    const d = layers.current.dyn; d.clearLayers();
+    if (prefs.showAccuracy && sharing.position?.accuracy) L.circle(toLL(sharing.position), { radius: sharing.position.accuracy, color: C.me, weight: 1, opacity: 0.5, fillOpacity: 0.12, interactive: false }).addTo(d);
+    if (iAmTagger && myPos && game?.status === 'active') L.circle(toLL(myPos), { radius: game.tag_radius_m, color: C.it, weight: 1.5, dashArray: '6 6', fillOpacity: 0.08, interactive: false }).addTo(d);
+  }, [map, sharing.position, prefs.showAccuracy, iAmTagger, game?.status, game?.tag_radius_m]);
+
+  // players
+  useEffect(() => {
+    if (!map || !layers.current || !game) return;
+    const keep = new Set();
+    for (const p of g.players) {
+      const isMe = p.user_id === profile?.id;
+      const fromPing = seesViaPing(p);
+      const loc = isMe && sharing.position ? sharing.position : locOf(p);
+      if (!loc) continue;
+      let st = playerState(p, fromPing ? { updated_at: game.last_ping_at } : g.locations[p.user_id], game, now);
+      if (fromPing && st === 'inactive') st = 'active';
+      if (st === 'left' || st === 'spectator') continue;
+      if (isMe && st === 'inactive') st = p.is_it ? 'it' : 'active';
+      keep.add(p.user_id);
+      const iconHtml = playerIconHtml({ profile: p.profile, state: st, isMe, teamColor: game.mode === 'team' && p.team ? TEAM_INFO[p.team].color : null,
+        frozen: p.is_paused || isFrozen(p, now), showName: prefs.showNames, pinged: fromPing });
+      let m = markers.current.get(p.user_id);
+      if (!m) {
+        m = L.marker(toLL(loc), { icon: L.divIcon({ className: '', html: iconHtml, iconSize: [64, 64], iconAnchor: [32, 32] }) }).addTo(layers.current.players);
+        m._gtHtml = iconHtml;
+        m.on('click', (e) => { L.DomEvent.stopPropagation(e); setSelected(p.user_id); });
+        markers.current.set(p.user_id, m);
+      } else {
+        m.setLatLng(toLL(loc));
+        if (m._gtHtml !== iconHtml) { m.setIcon(L.divIcon({ className: '', html: iconHtml, iconSize: [64, 64], iconAnchor: [32, 32] })); m._gtHtml = iconHtml; }
+      }
+      m.setZIndexOffset(st === 'it' ? 1000 : isMe ? 900 : 0);
+    }
+    for (const [uid, m] of markers.current) if (!keep.has(uid)) { m.remove(); markers.current.delete(uid); }
+  }, [map, g.players, g.locations, g.pings, viaPing, sharing.position, Math.floor(now / (pingMode ? 1000 : 5000)), prefs.showNames, game?.mode]);
+
+  useEffect(() => { if (prefs.followMe && map && sharing.position) map.panTo(toLL(sharing.position)); }, [prefs.followMe, sharing.position]);
+
+  // ---------- client-side alerts
+  const nearby = useRef(new Map()), edgeAt = useRef(0);
+  useEffect(() => {
+    if (!game || !me || !myPos || game.status !== 'active' || me.is_eliminated) return;
+    if (prefs.proximityAlerts && !pingMode) for (const p of g.players) {
+      const loc = g.locations[p.user_id];
+      if (!loc || p.user_id === me.user_id || p.left_at || p.is_eliminated || p.role !== 'player') continue;
+      const threat = game.mode === 'team' ? p.team !== me.team : me.is_it ? !p.is_it : p.is_it;
+      if (!threat) continue;
+      const d = distanceM(myPos, loc);
+      if (d < NEARBY_M && Date.now() - (nearby.current.get(p.user_id) || 0) > 60000) {
+        nearby.current.set(p.user_id, Date.now());
+        toast({ title: me.is_it || game.mode === 'team' ? 'A player has entered your area' : '⚠️ IT is nearby!', body: `${p.profile?.username} is ${formatDistance(d)} away.`, tone: me.is_it ? 'info' : 'warning' });
+      }
+    }
+    if (game.boundary.length >= 3 && pointInPolygon(myPos, game.boundary)) {
+      const edge = distanceToEdgeM(myPos, game.boundary);
+      if (edge < EDGE_WARN_M && Date.now() - edgeAt.current > 60000) {
+        edgeAt.current = Date.now();
+        toast({ title: 'You are approaching the game boundary', body: `${Math.round(edge)} m to the edge.`, tone: 'warning' });
+      }
+    }
+  }, [myPos?.latitude, myPos?.longitude, g.locations]);
+
+  const isHost = game.host_id === profile?.id;
+  const active = g.players.filter((p) => p.role === 'player' && !p.left_at);
+  const its = active.filter((p) => p.is_it && !p.is_eliminated);
+  const remaining = remainingCount(g.players, game);
+  const frozen = me ? isFrozen(me, now) : false;
+  const incoming = g.requests.find((r) => r.status === 'pending' && r.target_id === profile?.id);
+  const outgoing = g.requests.find((r) => r.status === 'pending' && r.tagger_id === profile?.id);
+  const disputes = isHost ? g.requests.filter((r) => r.status === 'disputed') : [];
+
+  const run = async (k, fn, ok) => {
+    setBusy(k);
+    try { await fn(); if (ok) toast({ title: ok, tone: 'success' }); }
+    catch (e) { toast({ title: e.message || 'Something went wrong', tone: 'danger' }); }
+    finally { setBusy(null); }
+  };
+  const requestTag = (t) => run('tag', async () => { await sharing.sendNow(); await rpc('request_tag', { g: game.id, target: t.user_id }); setTagOpen(false); setSelected(null); },
+    `Tag sent! Waiting for ${t.profile?.username} to confirm…`);
+  const recenter = () => myPos ? map.setView(toLL(myPos), 17) : map.fitBounds(L.latLngBounds(game.boundary.map(toLL)));
+
+  let timer = formatClock(gameSecondsLeft(game, now));
+  if (game.status === 'countdown' && game.starts_at) timer = `Starts in ${formatClock((new Date(game.starts_at) - now) / 1000)}`;
+  if (game.status === 'paused') timer = `⏸ ${timer}`;
+
+  const fixAge = sharing.lastFixAt ? (now - sharing.lastFixAt) / 1000 : Infinity;
+  const acc = sharing.position?.accuracy;
+  const gpsColor = !sharingEnabled ? 'var(--faint)' : sharing.permission === 'denied' || fixAge > 30 ? C.danger : acc > 25 ? C.warning : C.success;
+
+  const localOutside = !!sharing.position && game.boundary.length >= 3 && !pointInPolygon(sharing.position, game.boundary);
+  const showOob = sharingEnabled && !me?.is_eliminated && (me?.is_out_of_bounds || localOutside);
+  const oobLeft = me?.out_of_bounds_since ? Math.max(0, game.grace_seconds - (now - new Date(me.out_of_bounds_since)) / 1000) : game.grace_seconds;
+  const oobPenalty = { become_it: me?.is_it ? 'or get frozen' : 'or you become IT', warn: 'or the host is alerted', pause: 'or you get frozen', disqualify: 'or you’re disqualified' }[game.out_of_bounds_action];
+
+  const limitMs = game.speed_limit_mph ? game.speed_limit_mph * 0.44704 : null;
+  const localSpeeding = !!limitMs && (sharing.position?.speed || 0) > limitMs;
+  const showSpeed = sharingEnabled && game.status === 'active' && !me?.is_eliminated && (!!me?.speeding_since || localSpeeding);
+  const speedLeft = me?.speeding_since ? Math.max(0, game.speed_grace_seconds - (now - new Date(me.speeding_since)) / 1000) : game.speed_grace_seconds;
+  const mph = Math.round((sharing.position?.speed || 0) / 0.44704);
+
+  const sel = selected ? g.playerOf(selected) : null;
+
+  const candidates = g.players.filter((p) => canTag(me, p, game) && (locOf(p) || viaPing))
+    .map((p) => ({ p, d: myPos && locOf(p) ? distanceM(myPos, locOf(p)) : Infinity })).sort((a, b) => a.d - b.d);
+
+  return html`<div class="full">
+    <div class="map" ref=${mapRef}></div>
+
+    <div class="hud-top">
+      <${ItBanner} game=${game} its=${its} meId=${profile?.id} players=${active} />
+      <div class="pills">
+        <span class="pill" style="font-variant-numeric:tabular-nums">⏱ ${timer}</span>
+        <span class="pill">👥 ${remaining} ${game.mode === 'classic' || game.mode === 'team' ? 'playing' : 'left'}</span>
+        ${sharingEnabled
+          ? html`<span class="pill" style=${{ color: gpsColor }}><span class="dot" style=${{ background: gpsColor }}></span>
+              ${sharing.permission === 'denied' ? 'NO GPS' : fixAge > 30 ? 'GPS LOST' : `LIVE ±${acc != null ? Math.round(acc) : '?'}m`}</span>`
+          : html`<span class="pill">${me?.role === 'spectator' ? '👀 SPECTATING' : 'NOT SHARING'}</span>`}
+        ${nextPing != null && html`<span class="pill" style=${{ color: '#7dd3fc' }}>📡 Next ping ${formatClock(nextPing)}</span>`}
+        ${!g.connected && html`<span class="pill" style="background:var(--warning);color:#000">RECONNECTING…</span>`}
+        ${sharing.offline && g.connected && html`<span class="pill" style="background:var(--warning);color:#000">OFFLINE</span>`}
+      </div>
+      ${sharing.permission === 'denied' && html`<div class="banner" style="background:var(--danger)"><div class="t">Location is off</div>
+        <div class="b">iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using, then reload.</div></div>`}
+      ${showOob && html`<div class="banner" style="background:var(--danger)"><div class="t">🚧 OUT OF BOUNDS</div>
+        <div class="b">${me?.oob_penalized ? 'Get back inside the yellow boundary!' : `Get back inside within ${Math.ceil(oobLeft)}s ${oobPenalty}.`}</div></div>`}
+      ${showSpeed && html`<div class="banner" style="background:#b45309"><div class="t">🚗 SLOW DOWN! ${mph > 0 ? mph + ' mph' : ''}</div>
+        <div class="b">No vehicles. Stay under ${game.speed_limit_mph} mph${me?.speeding_since ? ` — ${Math.ceil(speedLeft)}s ${me.is_it ? 'until you’re frozen' : 'until you become IT'}` : ''}.</div></div>`}
+      ${frozen && html`<div class="banner" style="background:#1e3a8a"><div class="t">🧊 FROZEN</div><div class="b">You can't tag for ${Math.ceil((new Date(me.frozen_until) - now) / 1000)}s.</div></div>`}
+      ${me?.is_paused && html`<div class="banner" style="background:#1e3a8a"><div class="t">🧊 FROZEN</div><div class="b">Return inside the boundary to unfreeze.</div></div>`}
+      ${me?.is_eliminated && html`<div class="banner" style="background:var(--card2)"><div class="t">💀 You're out</div><div class="b">Keep watching the map${game.allow_rejoin ? ' — you can rejoin from the menu after 2 minutes' : ''}.</div></div>`}
+      ${outgoing && html`<div class="banner glass row"><div class="b grow">⏳ Waiting for ${g.profileOf(outgoing.target_id)?.username} to confirm your tag…</div>
+        <button style="color:var(--muted);font-weight:700" onClick=${() => run('c', () => rpc('cancel_tag', { request: outgoing.id }))}>Cancel</button></div>`}
+      ${disputes.length > 0 && html`<div class="banner" style="background:var(--warning);color:#000" onClick=${() => setDisputesOpen(true)}>
+        <div class="t">⚖️ ${disputes.length} disputed tag${disputes.length > 1 ? 's' : ''}</div><div class="b">Tap to decide.</div></div>`}
+    </div>
+
+    ${game.status === 'countdown' && game.starts_at && html`<div class="overlay">
+      <div class="big-count">${Math.max(0, Math.ceil((new Date(game.starts_at) - now) / 1000))}</div>
+      <div class="big-sub">${me?.is_it ? "YOU'RE IT — WAIT FOR IT…" : 'SCATTER!'}</div></div>`}
+    ${game.status === 'paused' && html`<div class="overlay"><div class="big-sub" style="font-size:36px">⏸ PAUSED</div><div class="muted">The host paused the game</div></div>`}
+
+    <div class="hud-bottom">
+      <div class="side-btns">
+        <button class=${`round glass ${prefs.followMe ? 'on' : ''}`} onClick=${() => { setPref('followMe', !prefs.followMe); if (!prefs.followMe) recenter(); }}>🧭</button>
+        <button class="round glass" onClick=${() => map.fitBounds(L.latLngBounds(game.boundary.map(toLL)), { padding: [20, 20] })}>🗺️</button>
+      </div>
+      <div class="bar glass">
+        <button class="bar-btn" onClick=${() => go(`/g/${game.id}/players`)}>👥<span>Players</span></button>
+        ${iAmTagger && game.status === 'active'
+          ? html`<button class="tag-btn" style=${frozen || me?.is_paused ? { opacity: 0.4 } : null} disabled=${frozen || me?.is_paused} onClick=${() => setTagOpen(true)}>TAG!</button>`
+          : html`<div class="tag-btn off">${me?.role === 'spectator' ? '👀' : me?.is_eliminated ? '💀' : 'RUN!'}</div>`}
+        <button class="bar-btn" onClick=${() => setMenuOpen(true)}>☰<span>${isHost ? 'Host' : 'Menu'}</span></button>
+      </div>
+    </div>
+
+    ${sel && html`<${PlayerCard} p=${sel} game=${game} now=${now} me=${me} myPos=${myPos} loc=${locOf(sel) && (locOf(sel).updated_at ? locOf(sel) : { ...locOf(sel), updated_at: locOf(sel).pinged_at })}
+      busy=${busy === 'tag'} onTag=${() => requestTag(sel)} onClose=${() => setSelected(null)} />`}
+
+    <${Sheet} open=${tagOpen} onClose=${() => setTagOpen(false)} title="Who did you tag?">
+      <div class="small" style="margin-bottom:10px">${viaPing ? `Distances are from the last ping. Tag whoever you actually touched — the game checks real GPS (must be within ${game.tag_radius_m} m).` : `Players within ${game.tag_radius_m} m are highlighted.`} They'll be asked to confirm.</div>
+      ${candidates.length === 0 ? html`<div class="muted">No one you can tag right now.</div>` : candidates.map(({ p, d }) => {
+        const loc = locOf(p);
+        const allowed = game.tag_radius_m + Math.min((acc || 0) + (loc?.accuracy || 0), game.tag_radius_m);
+        const inRange = !viaPing && d <= allowed, safe = !viaPing && loc && inSafeZone(loc, game.safe_zones);
+        return html`<div class="list-row tap" style=${inRange && !safe ? { borderColor: C.it, background: '#2a1a20' } : null} onClick=${() => busy !== 'tag' && requestTag(p)}>
+          <${Avatar} profile=${p.profile} size=${44} />
+          <div class="grow"><b>${p.profile?.username}</b><div class="small">${viaPing ? (isFinite(d) ? `~${formatDistance(d)} at this ping` : 'Hidden until the next ping') : `${safe ? '🛡️ In a safe zone' : inRange ? 'In range' : 'Too far'} · ${formatDistance(d)}`}</div></div>
+          <span style="font-size:22px">${inRange && !safe ? '✋' : '·'}</span></div>`;
+      })}
+    <//>
+
+    <${Modal} open=${!!incoming} borderColor=${C.it}>
+      ${incoming && html`
+        <div class="center-col"><${Avatar} profile=${g.profileOf(incoming.tagger_id)} size=${72} ring=${C.it} />
+        <div class="big-sub mt12" style="font-size:26px">YOU'VE BEEN TAGGED!</div>
+        <div class="muted mt8">${g.profileOf(incoming.tagger_id)?.username} says they tagged you${incoming.distance_m != null ? ` (GPS: ${Math.round(incoming.distance_m)} m apart)` : ''}.</div>
+        <div class="small mt8">Goes to the host in ${Math.max(0, Math.ceil(game.tag_confirm_timeout_seconds - secondsSince(incoming.created_at, now)))}s</div></div>
+        <${Button} big variant="it" title="YES, I'M TAGGED" loading=${busy === 'confirm'} style="margin-top:18px"
+          onClick=${() => run('confirm', () => rpc('respond_tag', { request: incoming.id, accept: true }))} />
+        <${Button} variant="secondary" title="No — dispute it" loading=${busy === 'dispute'} style="margin-top:10px"
+          onClick=${() => run('dispute', () => rpc('respond_tag', { request: incoming.id, accept: false }), 'Sent to the host')} />`}
+    <//>
+
+    <${Sheet} open=${disputesOpen && disputes.length > 0} onClose=${() => setDisputesOpen(false)} title="Disputed tags">
+      ${disputes.map((r) => html`<div class="card" style="margin-bottom:10px;background:var(--card2)">
+        <b>${g.profileOf(r.tagger_id)?.username} → ${g.profileOf(r.target_id)?.username}</b>
+        <div class="small">${r.distance_m != null ? `${Math.round(r.distance_m)} m apart by GPS · ` : ''}${timeAgo(r.created_at, now)}</div>
+        <div class="row mt12">
+          <${Button} variant="it" title="Tag counts" onClick=${() => run('r', () => rpc('resolve_tag', { request: r.id, uphold: true }), 'Tag upheld')} />
+          <${Button} variant="secondary" title="No tag" onClick=${() => run('r', () => rpc('resolve_tag', { request: r.id, uphold: false }), 'Tag overturned')} />
+        </div></div>`)}
+    <//>
+
+    <${Sheet} open=${menuOpen} onClose=${() => setMenuOpen(false)} title=${isHost ? 'Host controls' : 'Menu'}>
+      <div class="small" style="margin-bottom:12px">${MODE_INFO[game.mode].emoji} ${game.name} · code ${game.code}</div>
+      <div class="gap8">
+        ${isHost && game.status === 'active' && html`<${Button} variant="secondary" icon="⏸" title="Pause game" loading=${busy === 'pause'} onClick=${() => run('pause', () => rpc('pause_game', { g: game.id }))} />`}
+        ${isHost && game.status === 'paused' && html`<${Button} variant="success" icon="▶" title="Resume game" loading=${busy === 'resume'} onClick=${() => run('resume', () => rpc('resume_game', { g: game.id }))} />`}
+        ${isHost && disputes.length > 0 && html`<${Button} variant="secondary" icon="⚖️" title=${`Resolve disputes (${disputes.length})`} onClick=${() => { setMenuOpen(false); setDisputesOpen(true); }} />`}
+        ${me?.is_eliminated && game.allow_rejoin && game.status === 'active' && html`<${Button} variant="success" icon="🔄" title="Rejoin the game" loading=${busy === 'rejoin'} onClick=${() => run('rejoin', () => rpc('rejoin_play', { g: game.id }), "You're back in!")} />`}
+        <${Button} variant="secondary" icon="🗺️" title=${`Map: ${prefs.mapType}`} onClick=${() => setPref('mapType', prefs.mapType === 'dark' ? 'streets' : prefs.mapType === 'streets' ? 'satellite' : 'dark')} />
+        <${Button} variant="secondary" icon="⚙️" title="Settings" onClick=${() => { setMenuOpen(false); go('/settings'); }} />
+        ${isHost
+          ? html`<${Button} variant="danger" title="End game for everyone" onClick=${() => confirm('End the game? Final results will be shown to everyone.') && run('end', () => rpc('end_game', { g: game.id }))} />`
+          : html`<${Button} variant="danger" title="Stop sharing & leave game" onClick=${() => confirm(`Leave the game? Your location stops being shared immediately.${game.allow_rejoin ? '' : " You won't be able to rejoin."}`) &&
+              run('leave', async () => { await rpc('leave_game', { g: game.id }); replace('/home'); })} />`}
+      </div>
+    <//>
+  </div>`;
+}
+
+function ItBanner({ game, its, meId, players }) {
+  if (game.mode === 'team') {
+    const n = (t) => players.filter((p) => p.team === t && !p.is_eliminated).length;
+    const mine = players.find((p) => p.user_id === meId)?.team;
+    return html`<div class="it-banner glass" style="justify-content:center;flex-direction:column;gap:0;border-color:var(--border)">
+      <div class="row"><span class="n" style=${{ color: TEAM_INFO.alpha.color }}>${TEAM_INFO.alpha.name.toUpperCase()} ${n('alpha')}</span>
+        <span class="l">VS</span><span class="n" style=${{ color: TEAM_INFO.bravo.color }}>${n('bravo')} ${TEAM_INFO.bravo.name.toUpperCase()}</span></div>
+      ${mine && html`<div class="l">You're on ${TEAM_INFO[mine].name}</div>`}</div>`;
+  }
+  const meIt = its.some((p) => p.user_id === meId);
+  if (!its.length) return html`<div class="it-banner"><div class="n">Picking IT…</div></div>`;
+  if (its.length === 1) {
+    const p = its[0];
+    return html`<div class=${`it-banner ${meIt ? 'me' : ''}`}>
+      <${Avatar} profile=${p.profile} size=${34} ring="#fff" />
+      <div class="grow"><div class="l">CURRENTLY IT</div><div class="n ellipsis">${meIt ? "YOU'RE IT!" : p.profile?.username}</div></div>
+      <span class="it-badge">IT</span></div>`;
+  }
+  return html`<div class=${`it-banner ${meIt ? 'me' : ''}`}>
+    <div class="row" style="gap:0">${its.slice(0, 4).map((p, i) => html`<${Avatar} profile=${p.profile} size=${30} ring="#fff" style=${{ marginLeft: i ? '-10px' : 0 }} />`)}</div>
+    <div class="grow"><div class="l">${meIt ? "YOU'RE ON THE IT TEAM" : `IT TEAM · ${its.length}`}</div><div class="n ellipsis" style="font-size:18px">${its.map((p) => p.profile?.username).join(', ')}</div></div></div>`;
+}
+
+function PlayerCard({ p, game, now, me, myPos, loc, onTag, onClose, busy }) {
+  const st = playerState(p, loc, game, now);
+  const isMe = p.user_id === me?.user_id;
+  const d = myPos && loc && !isMe ? distanceM(myPos, loc) : null;
+  return html`<div class="pcard" style="bottom:calc(var(--sb) + 112px)">
+    <button style="position:absolute;right:14px;top:10px;font-size:20px;color:var(--muted)" onClick=${onClose}>✕</button>
+    <div class="row" style="gap:12px">
+      <${Avatar} profile=${p.profile} size=${56} ring=${st === 'it' ? C.it : isMe ? C.me : C.player} dim=${st === 'eliminated'} />
+      <div class="grow"><div class="row" style="gap:6px"><span class="h2">${p.profile?.username}${isMe ? ' (you)' : ''}</span>${p.is_it && html`<span class="it-badge">IT</span>`}</div>
+        <div class="muted">${STATE_LABEL[st]}${game.mode === 'team' && p.team ? ' · ' + TEAM_INFO[p.team].name : ''}${p.user_id === game.host_id ? ' · 👑 Host' : ''}</div></div>
+    </div>
+    <div class="row" style="margin:12px 0">
+      ${[['Survived', formatDuration(survivalSeconds(p, game, now))], ['Tags', p.tags_count], ['Distance', d != null ? formatDistance(d) : '—'], ['Updated', timeAgo(loc?.updated_at, now)]]
+        .map(([l, v]) => html`<div class="grow"><b>${v}</b><div class="small">${l}</div></div>`)}
+    </div>
+    ${loc?.accuracy != null && html`<div class="small">GPS accuracy ±${Math.round(loc.accuracy)} m</div>`}
+    ${canTag(me, p, game) && html`<${Button} variant="it" title=${`✋ TAG ${(p.profile?.username || '').toUpperCase()}`} loading=${busy} onClick=${onTag} style="margin-top:12px" />`}
+  </div>`;
+}
+
+// ===== main.js =====
+let redirecting = false;
+const redirect = (p) => { if (redirecting) return; redirecting = true; setTimeout(() => { redirecting = false; replace(p); }, 0); };
+
+function Router() {
+  const { path } = useStore(routeStore);
+  const auth = useStore(authStore);
+  const { parts, query } = parseRoute(path);
+
+  useEffect(() => { window.scrollTo(0, 0); }, [path]);
+
+  if (!isConfigured) {
+    return html`<${Screen}><h1 class="h1" style="margin-top:80px">Almost there</h1>
+      <p>Open <b>config.js</b> and paste in your Supabase URL and anon key.</p><//>`;
+  }
+  if (auth.loading) return html`<${Loading} />`;
+
+  // Gate: need a session, then a profile. Remember where they were going (e.g. an invite link).
+  if (!auth.session) {
+    if (parts[0] !== 'signin') { sessionStorage.setItem('gt:after-profile', path === '/' ? '/home' : path); redirect('/signin'); return null; }
+    return html`<${SignIn} />`;
+  }
+  if (!auth.profile) {
+    if (parts[0] !== 'profile-setup') { if (parts[0] !== 'signin' && path !== '/') sessionStorage.setItem('gt:after-profile', path); redirect('/profile-setup'); return null; }
+    return html`<${ProfileSetup} />`;
+  }
+
+  const [a, b, c] = parts;
+  if (!a || a === 'signin') {
+    const next = sessionStorage.getItem('gt:after-profile');
+    sessionStorage.removeItem('gt:after-profile');
+    redirect(next && next !== '/signin' ? next : '/home');
+    return null;
+  }
+  switch (a) {
+    case 'home': return html`<${Home} />`;
+    case 'profile-setup': return html`<${ProfileSetup} />`;
+    case 'create': return html`<${CreateGame} />`;
+    case 'boundary': return html`<${BoundaryEditor} gameId=${query.game} />`;
+    case 'join': return html`<${Join} code=${query.code} key=${query.code || 'join'} />`;
+    case 'profile': return html`<${Profile} />`;
+    case 'settings': return html`<${Settings} />`;
+    case 'g':
+      if (c === 'lobby') return html`<${Lobby} id=${b} key=${b} />`;
+      if (c === 'play') return html`<${Play} id=${b} key=${b} />`;
+      if (c === 'players') return html`<${Players} id=${b} key=${b} />`;
+      if (c === 'results') return html`<${Results} id=${b} key=${b} />`;
+      if (c === 'edit') return html`<${EditGame} id=${b} key=${b} />`;
+  }
+  redirect('/home');
+  return null;
+}
+
+function App() {
+  return html`<${Router} /><${Toasts} />`;
+}
+
+render(html`<${App} />`, document.getElementById('app'));
+
+</script>
+</body>
+</html>
