@@ -7,12 +7,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="apple-mobile-web-app-title" content="GIANT TAG" />
+<meta name="apple-mobile-web-app-title" content="MANHUNT" />
 <meta name="description" content="A real-life game of tag across your whole town." />
 <link rel="apple-touch-icon" href="icon-180.png" />
 <link rel="icon" href="icon-180.png" />
 <link rel="manifest" href="manifest.webmanifest" />
-<title>GIANT TAG</title>
+<title>MANHUNT</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
@@ -261,9 +261,9 @@ body {
 .logo-wrap { position: relative; display: grid; place-items: center; }
 .logo-wrap.with-radar { min-height: 250px; }
 .logo { font-family: "Bungee", sans-serif; font-style: normal; transform: rotate(-4deg); position: relative; z-index: 2; }
-.logo .a { font-size: 58px; color: var(--text); letter-spacing: 2px;
+.logo .a { font-size: 66px; color: var(--text); letter-spacing: 6px;
   text-shadow: 0 4px 0 #9b2a35, 0 8px 0 var(--bg-deep), 0 10px 24px rgba(0,0,0,.5); }
-.logo .b { font-size: 92px; color: var(--it); margin-top: -6px; letter-spacing: 4px;
+.logo .b { font-size: 78px; color: var(--it); margin-top: -6px; letter-spacing: 3px;
   text-shadow: 0 5px 0 #b38f00, 0 10px 0 var(--bg-deep), 0 0 40px rgba(254,205,0,.35); animation: logo-bob 3s ease-in-out infinite; }
 @keyframes logo-bob { 50% { transform: translateY(-4px); } }
 
@@ -475,12 +475,12 @@ if (isConfigured) {
 
 // ---------------------------------------------------------------- types / constants
 const MODE_INFO = {
+  manhunt: { title: 'Manhunt', emoji: '🔦', blurb: 'A team of hunters chases everyone. Caught runners are out. Survive the clock, or hunters catch them all.' },
   classic: { title: 'Classic Tag', emoji: '🏃', blurb: 'Whoever gets tagged becomes IT. Spend the least time as IT to win.' },
   infection: { title: 'Infection', emoji: '🧟', blurb: 'Everyone tagged joins the IT team. Last survivor wins.' },
   elimination: { title: 'Elimination', emoji: '💀', blurb: 'Tagged players are out. Last runner standing wins.' },
   team: { title: 'Team Tag', emoji: '⚔️', blurb: 'Two teams hunt each other. Most players left wins.' },
   last_standing: { title: 'Last Person Standing', emoji: '👑', blurb: 'Tagged players are out, and a new hunter is released every few minutes.' },
-  manhunt: { title: 'Manhunt', emoji: '🔦', blurb: 'A team of hunters chases everyone. Caught runners are out. Survive the clock, or hunters catch them all.' },
 };
 const isHuntMode = (game) => game?.mode === 'manhunt';
 const itWord = (game, plural) => (isHuntMode(game) ? (plural ? 'HUNTERS' : 'HUNTER') : (plural ? 'IT TEAM' : 'IT'));
@@ -494,7 +494,7 @@ const C = {
 };
 
 const DEFAULT_SETTINGS = {
-  name: '', mode: 'classic', location_name: null, boundary: [], safe_zones: [], max_radius_m: null,
+  name: '', mode: 'manhunt', location_name: null, boundary: [], safe_zones: [], max_radius_m: null,
   max_players: 20, duration_seconds: 1800, countdown_seconds: 60, starting_it_id: null, tag_radius_m: 10,
   tag_back_cooldown_seconds: 60, tag_confirm_timeout_seconds: 60, escalation_interval_seconds: 300,
   out_of_bounds_action: 'become_it', grace_seconds: 20, speed_limit_mph: 18, speed_grace_seconds: 10, it_ping_seconds: 60,
@@ -926,7 +926,7 @@ function Avatar({ profile, size = 44, ring, dim, style }) {
 
 const Logo = ({ radar }) => html`<div class=${`logo-wrap ${radar ? 'with-radar' : ''}`}>
   ${radar && html`<div class="radar"><div class="sweep"></div><span class="blip b1"></span><span class="blip b2"></span><span class="blip b3 it"></span></div>`}
-  <div class="logo"><span class="a">GIANT</span><span class="b">TAG</span></div>
+  <div class="logo"><span class="a">MAN</span><span class="b">HUNT</span></div>
 </div>`;
 
 const Loading = ({ label }) => html`<div class="loading"><div class="spinner"></div>${label && html`<div class="muted">${label}</div>`}</div>`;
@@ -1114,7 +1114,7 @@ function Home() {
       <${Button} variant="secondary" icon="👤" title="My profile & stats" onClick=${() => go('/profile')} />
     </div>
     ${isIOS && !isStandalone && html`<div class="a2hs">
-      <b>📲 Add GIANT TAG to your home screen</b>
+      <b>📲 Add MANHUNT to your home screen</b>
       <div class="small" style="color:#cbd5e1;margin-top:4px">In Safari tap <b>Share</b> (the square with an arrow) → <b>Add to Home Screen</b>. It opens full-screen like a real app.</div>
     </div>`}
     ${live.length > 0 && html`<${Section}>Happening now<//>${live.map((r) => html`<${GameRow} row=${r} />`)}`}
@@ -1500,8 +1500,8 @@ function Lobby({ id }) {
 
   const run = async (k, fn) => { setBusy(k); try { await fn(); } catch (e) { toast({ title: e.message, tone: 'danger' }); } finally { setBusy(null); } };
   const share = async () => {
-    const text = `Join my GIANT TAG game "${game.name}"! Code: ${game.code}`;
-    if (navigator.share) { try { await navigator.share({ title: 'GIANT TAG', text, url: invite }); } catch {} }
+    const text = `Join my MANHUNT game "${game.name}"! Code: ${game.code}`;
+    if (navigator.share) { try { await navigator.share({ title: 'MANHUNT', text, url: invite }); } catch {} }
     else { await navigator.clipboard?.writeText(`${text}\n${invite}`); toast({ title: 'Invite link copied', tone: 'success' }); }
   };
   const toggleReady = () => {
@@ -1576,7 +1576,7 @@ function Lobby({ id }) {
         • Only the people in “${game.name}” can see you.<br/>
         • Sharing starts when the game starts and stops when it ends or you leave.<br/>
         • A green LIVE badge shows whenever you're sharing.<br/>
-        • Keep GIANT TAG open on screen during the game. Your phone can't share location while locked.
+        • Keep MANHUNT open on screen during the game. Your phone can't share location while locked.
       </div>
       <${Button} variant="success" title=${isHost ? 'I agree, start the game' : "I agree, I'm ready"} onClick=${accept} style="margin-top:18px" />
       <${Button} variant="ghost" title="Not now" onClick=${() => setConsent(false)} style="margin-top:6px" />
@@ -1663,7 +1663,7 @@ function Results({ id }) {
     : game.mode === 'manhunt' && winners.length ? (winners.some((w) => w.is_it) ? 'HUNTERS WIN!' : winners.length === 1 ? `${(winners[0].profile?.username || '').toUpperCase()} ESCAPED!` : 'RUNNERS WIN!')
     : winners.length === 1 ? `${(winners[0].profile?.username || '').toUpperCase()} WINS!` : winners.length > 1 ? `${winners.length} WINNERS!` : 'GAME OVER';
   const share = async () => {
-    const text = `🏃 GIANT TAG — ${game.name}\n${title}\n` + ranked.slice(0, 5).map((p) => `#${p.final_rank} ${p.profile?.username} · ${formatDuration(p.survival_seconds)} survived · ${p.tags_count} tags`).join('\n');
+    const text = `🔦 MANHUNT — ${game.name}\n${title}\n` + ranked.slice(0, 5).map((p) => `#${p.final_rank} ${p.profile?.username} · ${formatDuration(p.survival_seconds)} survived · ${p.tags_count} tags`).join('\n');
     if (navigator.share) navigator.share({ text }).catch(() => {}); else { navigator.clipboard?.writeText(text); toast({ title: 'Results copied', tone: 'success' }); }
   };
 
