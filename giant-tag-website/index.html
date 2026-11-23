@@ -1679,7 +1679,7 @@ function Results({ id }) {
     <div class="stats two mt16">
       <div class="stat"><div class="v">${formatDuration(duration)}</div><div class="small">Game length</div></div>
       <div class="stat"><div class="v">${tags.length}</div><div class="small">Total tags</div></div>
-      <div class="stat"><div class="v">${g.history.filter((h) => h.kind !== 'auto_assign').length}</div><div class="small">IT changes</div></div>
+      <div class="stat"><div class="v">${g.history.filter((h) => h.kind !== 'auto_assign').length}</div><div class="small">${game.mode === 'manhunt' ? 'Catches' : 'IT changes'}</div></div>
       <div class="stat"><div class="v">${longest ? formatDuration(longest.survival_seconds) : '—'}</div><div class="small">Longest survival${longest ? ' · ' + longest.profile?.username : ''}</div></div>
     </div>
     <${Section}>Final rankings<//>
@@ -2143,7 +2143,7 @@ function ItBanner({ game, its, meId, players }) {
     return html`<div class=${`it-banner ${meIt ? 'me' : ''}`}>
       <${Avatar} profile=${p.profile} size=${34} ring=${C.cherry} />
       <div class="grow"><div class="l">${game.mode === 'manhunt' ? 'HUNTER' : 'CURRENTLY IT'}</div><div class="n ellipsis">${meIt ? (game.mode === 'manhunt' ? "YOU'RE THE HUNTER!" : "YOU'RE IT!") : p.profile?.username}</div></div>
-      <span class="it-badge">IT</span></div>`;
+      <span class="it-badge">${game.mode === 'manhunt' ? '🔦' : 'IT'}</span></div>`;
   }
   return html`<div class=${`it-banner ${meIt ? 'me' : ''}`}>
     <div class="row" style="gap:0">${its.slice(0, 4).map((p, i) => html`<${Avatar} profile=${p.profile} size=${30} ring=${C.cherry} style=${{ marginLeft: i ? '-10px' : 0 }} />`)}</div>
