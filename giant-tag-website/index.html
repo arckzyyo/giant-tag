@@ -480,7 +480,10 @@ const MODE_INFO = {
   elimination: { title: 'Elimination', emoji: '💀', blurb: 'Tagged players are out. Last runner standing wins.' },
   team: { title: 'Team Tag', emoji: '⚔️', blurb: 'Two teams hunt each other. Most players left wins.' },
   last_standing: { title: 'Last Person Standing', emoji: '👑', blurb: 'Tagged players are out, and a new hunter is released every few minutes.' },
+  manhunt: { title: 'Manhunt', emoji: '🔦', blurb: 'A team of hunters chases everyone. Caught runners are out. Survive the clock, or hunters catch them all.' },
 };
+const isHuntMode = (game) => game?.mode === 'manhunt';
+const itWord = (game, plural) => (isHuntMode(game) ? (plural ? 'HUNTERS' : 'HUNTER') : (plural ? 'IT TEAM' : 'IT'));
 const TEAM_INFO = { alpha: { name: 'Team Blaze', color: '#F97316' }, bravo: { name: 'Team Volt', color: '#A855F7' } };
 const AVATAR_EMOJIS = ['🏃', '🦊', '🐺', '🦖', '🐸', '🐯', '🦄', '🐙', '👻', '🤖', '🥷', '🧙', '🦸', '🐼', '🐵', '🔥'];
 const AVATAR_COLORS = ['#3B82F6', '#22C55E', '#F97316', '#A855F7', '#EC4899', '#14B8A6', '#EAB308', '#64748B'];
@@ -495,7 +498,7 @@ const DEFAULT_SETTINGS = {
   max_players: 20, duration_seconds: 1800, countdown_seconds: 60, starting_it_id: null, tag_radius_m: 10,
   tag_back_cooldown_seconds: 60, tag_confirm_timeout_seconds: 60, escalation_interval_seconds: 300,
   out_of_bounds_action: 'become_it', grace_seconds: 20, speed_limit_mph: 18, speed_grace_seconds: 10, it_ping_seconds: 60,
-  allow_rejoin: false, allow_spectators: true, location_retention_hours: 24,
+  allow_rejoin: false, allow_spectators: true, location_retention_hours: 24, hunter_count: null,
 };
 const draftStore = createStore({ ...DEFAULT_SETTINGS });
 const settingsOf = (g) => Object.fromEntries(Object.keys(DEFAULT_SETTINGS).map((k) => [k, g[k]]));
@@ -838,10 +841,10 @@ function markerColor(state, isMe, teamColor) {
   if (isMe) return C.me;
   return teamColor || C.player;
 }
-function playerIconHtml({ profile, state, isMe, teamColor, frozen, showName, pinged, stale }) {
+function playerIconHtml({ profile, state, isMe, teamColor, frozen, showName, pinged, stale, itLabel = 'IT' }) {
   const it = state === 'it', color = markerColor(state, isMe, teamColor), size = it ? 40 : 34;
   const dim = state === 'inactive' || state === 'eliminated' || stale;
-  return `<div class="pm ${pinged ? 'ping-fade' : ''}">${it ? '<div class="pulse"></div>' : ''}${pinged ? '<div class="ping-ring"></div>' : ''}<div class="pm-ring ${dim ? 'pm-dim' : ''}" style="border-color:${color};box-shadow:0 0 12px ${color}">${avatarHtml(profile, size)}</div>${it ? '<div class="pm-badge">IT</div>' : ''}${frozen ? '<div class="pm-frozen">🧊</div>' : ''}${showName ? `<div class="pm-name">${esc(isMe ? 'You' : profile?.username)}</div>` : ''}</div>`;
+  return `<div class="pm ${pinged ? 'ping-fade' : ''}">${it ? '<div class="pulse"></div>' : ''}${pinged ? '<div class="ping-ring"></div>' : ''}<div class="pm-ring ${dim ? 'pm-dim' : ''}" style="border-color:${color};box-shadow:0 0 12px ${color}">${avatarHtml(profile, size)}</div>${it ? `<div class="pm-badge">${itLabel}</div>` : ''}${frozen ? '<div class="pm-frozen">🧊</div>' : ''}${showName ? `<div class="pm-name">${esc(isMe ? 'You' : profile?.username)}</div>` : ''}</div>`;
 }
 
 function vibrate(pattern) { if (prefsStore.get().haptics && navigator.vibrate) navigator.vibrate(pattern); }
@@ -1160,6 +1163,8 @@ function SettingsForm({ gameId }) {
       <${Stepper} label="Max players" value=${d.max_players} min=${2} max=${200} onChange=${(v) => set({ max_players: v })} />
       <${Stepper} label="Game length" value=${d.duration_seconds} step=${300} min=${300} max=${21600} format=${formatDuration} onChange=${(v) => set({ duration_seconds: v })} />
       <${Stepper} label="Head start" value=${d.countdown_seconds} step=${15} min=${0} max=${600} format=${(v) => (v ? v + 's' : 'None')} onChange=${(v) => set({ countdown_seconds: v })} />
+      ${d.mode === 'manhunt' && html`<${Stepper} label="Hunters" value=${d.hunter_count ?? 0} min=${0} max=${20}
+        format=${(v) => (v ? String(v) : 'Auto (1 in 4)')} onChange=${(v) => set({ hunter_count: v || null })} />`}
       ${d.mode === 'last_standing' && html`<${Stepper} label="New hunter every" value=${d.escalation_interval_seconds} step=${60} min=${60} max=${3600} format=${formatDuration} onChange=${(v) => set({ escalation_interval_seconds: v })} />`}
       <${Toggle} label="Allow spectators" value=${d.allow_spectators} onChange=${(v) => set({ allow_spectators: v })} />
       <${Toggle} label="Eliminated players can rejoin" sub="After a 2 minute penalty. Players who leave can also come back." value=${d.allow_rejoin} onChange=${(v) => set({ allow_rejoin: v })} />
@@ -1543,7 +1548,8 @@ function Lobby({ id }) {
       ${[
         ['Duration', formatDuration(game.duration_seconds)],
         ['Head start', game.countdown_seconds ? game.countdown_seconds + 's' : 'None'],
-        game.mode !== 'team' && ['Starting IT', startingIt || 'Random'],
+        game.mode === 'manhunt' && ['Hunters', game.hunter_count ? String(game.hunter_count) : 'Auto (1 in 4)'],
+        game.mode !== 'team' && [game.mode === 'manhunt' ? 'Starting hunter' : 'Starting IT', startingIt || 'Random'],
         ['Auto-tag distance', game.tag_radius_m + ' m'],
         game.mode !== 'team' && ['IT ↔ runners', game.it_ping_seconds ? `Ping every ${game.it_ping_seconds >= 60 ? game.it_ping_seconds / 60 + ' min' : game.it_ping_seconds + 's'}` : 'Live'],
         ['Speed limit', game.speed_limit_mph ? `${game.speed_limit_mph} mph → become IT` : 'Off'],
@@ -1577,7 +1583,7 @@ function Lobby({ id }) {
     <//>
     <${Sheet} open=${!!menuFor} onClose=${() => setMenuFor(null)} title=${menuFor?.profile?.username}>
       <div class="gap8">
-        <${Button} variant="secondary" title="🔴 Make starting IT" onClick=${() => { const p = menuFor; setMenuFor(null); run('menu', () => rpc('update_game_settings', { g: game.id, settings: { starting_it_id: p.user_id } })); }} />
+        <${Button} variant="secondary" title=${game.mode === 'manhunt' ? '🔦 Make a starting hunter' : '🔴 Make starting IT'} onClick=${() => { const p = menuFor; setMenuFor(null); run('menu', () => rpc('update_game_settings', { g: game.id, settings: { starting_it_id: p.user_id } })); }} />
         <${Button} variant="danger" title="Remove from lobby" onClick=${() => { const p = menuFor; setMenuFor(null); run('menu', () => rpc('kick_player', { g: game.id, target: p.user_id })); }} />
       </div>
     <//>
@@ -1608,7 +1614,7 @@ function Players({ id }) {
   if (g.loading || !game) return html`<${Loading} />`;
   const rows = g.players.map((p) => ({ p, st: playerState(p, g.locations[p.user_id], game, now) }));
   const sections = [
-    [game.mode === 'classic' ? 'IT' : 'IT team', rows.filter((x) => x.st === 'it')],
+    [game.mode === 'classic' ? 'IT' : game.mode === 'manhunt' ? 'Hunters' : 'IT team', rows.filter((x) => x.st === 'it')],
     ['Active players', rows.filter((x) => x.st === 'active' || x.st === 'inactive')],
     ['Eliminated', rows.filter((x) => x.st === 'eliminated')],
     ['Spectators', rows.filter((x) => x.st === 'spectator')],
@@ -1654,6 +1660,7 @@ function Results({ id }) {
   const longest = [...ranked].sort((a, b) => (b.survival_seconds || 0) - (a.survival_seconds || 0))[0];
   const duration = game.started_at && game.finished_at ? (new Date(game.finished_at) - new Date(game.started_at)) / 1000 - game.paused_seconds : 0;
   const title = game.status === 'cancelled' ? 'GAME CANCELLED' : game.winning_team ? `${TEAM_INFO[game.winning_team].name.toUpperCase()} WINS!`
+    : game.mode === 'manhunt' && winners.length ? (winners.some((w) => w.is_it) ? 'HUNTERS WIN!' : winners.length === 1 ? `${(winners[0].profile?.username || '').toUpperCase()} ESCAPED!` : 'RUNNERS WIN!')
     : winners.length === 1 ? `${(winners[0].profile?.username || '').toUpperCase()} WINS!` : winners.length > 1 ? `${winners.length} WINNERS!` : 'GAME OVER';
   const share = async () => {
     const text = `🏃 GIANT TAG — ${game.name}\n${title}\n` + ranked.slice(0, 5).map((p) => `#${p.final_rank} ${p.profile?.username} · ${formatDuration(p.survival_seconds)} survived · ${p.tags_count} tags`).join('\n');
@@ -1685,7 +1692,7 @@ function Results({ id }) {
     ${trail.length > 1 && html`<${Section}>Your route<//><${RouteMap} game=${game} trail=${trail} /><div class="small">Only you can see your route.</div>`}
     ${g.history.length > 0 && html`<${Section}>Tag history<//><${Card}>${g.history.map((h) => html`<div style="padding:4px 0">
       <span class="small">${new Date(h.created_at).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}  </span>
-      ${h.kind === 'auto_assign' ? `${g.profileOf(h.new_it)?.username} started as IT` : h.kind === 'escalation' ? `${g.profileOf(h.new_it)?.username} became a hunter`
+      ${h.kind === 'auto_assign' ? `${g.profileOf(h.new_it)?.username} started as ${game.mode === 'manhunt' ? 'a hunter' : 'IT'}` : h.kind === 'escalation' ? `${g.profileOf(h.new_it)?.username} became a hunter`
         : h.kind === 'penalty' ? `${g.profileOf(h.new_it)?.username} became IT (penalty)` : `${g.profileOf(h.previous_it)?.username} ${KIND_VERB[h.kind]} ${g.profileOf(h.new_it)?.username}`}
     </div>`)}<//>`}
     <div class="gap12 mt24">
@@ -1915,7 +1922,8 @@ function PlayView({ id, g }) {
       if (isMe && st === 'inactive') st = p.is_it ? 'it' : 'active';
       keep.add(p.user_id);
       const iconHtml = playerIconHtml({ profile: p.profile, state: st, isMe, teamColor: game.mode === 'team' && p.team ? TEAM_INFO[p.team].color : null,
-        frozen: p.is_paused || isFrozen(p, now), showName: prefs.showNames, pinged: fromPing });
+        frozen: p.is_paused || isFrozen(p, now), showName: prefs.showNames, pinged: fromPing,
+        itLabel: game.mode === 'manhunt' ? 'HUNTER' : 'IT' });
       let m = markers.current.get(p.user_id);
       if (!m) {
         m = L.marker(toLL(loc), { icon: L.divIcon({ className: '', html: iconHtml, iconSize: [64, 64], iconAnchor: [32, 32] }) }).addTo(layers.current.players);
@@ -2033,7 +2041,7 @@ function PlayView({ id, g }) {
 
     ${game.status === 'countdown' && game.starts_at && html`<div class="overlay">
       <div class="big-count">${Math.max(0, Math.ceil((new Date(game.starts_at) - now) / 1000))}</div>
-      <div class="big-sub">${me?.is_it ? "YOU'RE IT — WAIT FOR IT…" : 'SCATTER!'}</div></div>`}
+      <div class="big-sub">${me?.is_it ? (game.mode === 'manhunt' ? 'HUNTER — WAIT FOR IT…' : "YOU'RE IT — WAIT FOR IT…") : game.mode === 'manhunt' ? 'RUN & HIDE!' : 'SCATTER!'}</div></div>`}
     ${game.status === 'paused' && html`<div class="overlay"><div class="big-sub" style="font-size:36px">⏸ PAUSED</div><div class="muted">The host paused the game</div></div>`}
 
     <div class="hud-bottom">
@@ -2134,12 +2142,12 @@ function ItBanner({ game, its, meId, players }) {
     const p = its[0];
     return html`<div class=${`it-banner ${meIt ? 'me' : ''}`}>
       <${Avatar} profile=${p.profile} size=${34} ring=${C.cherry} />
-      <div class="grow"><div class="l">CURRENTLY IT</div><div class="n ellipsis">${meIt ? "YOU'RE IT!" : p.profile?.username}</div></div>
+      <div class="grow"><div class="l">${game.mode === 'manhunt' ? 'HUNTER' : 'CURRENTLY IT'}</div><div class="n ellipsis">${meIt ? (game.mode === 'manhunt' ? "YOU'RE THE HUNTER!" : "YOU'RE IT!") : p.profile?.username}</div></div>
       <span class="it-badge">IT</span></div>`;
   }
   return html`<div class=${`it-banner ${meIt ? 'me' : ''}`}>
     <div class="row" style="gap:0">${its.slice(0, 4).map((p, i) => html`<${Avatar} profile=${p.profile} size=${30} ring=${C.cherry} style=${{ marginLeft: i ? '-10px' : 0 }} />`)}</div>
-    <div class="grow"><div class="l">${meIt ? "YOU'RE ON THE IT TEAM" : `IT TEAM · ${its.length}`}</div><div class="n ellipsis" style="font-size:18px">${its.map((p) => p.profile?.username).join(', ')}</div></div></div>`;
+    <div class="grow"><div class="l">${meIt ? `YOU'RE ON THE ${itWord(game, true)}` : `${itWord(game, true)} · ${its.length}`}</div><div class="n ellipsis" style="font-size:18px">${its.map((p) => p.profile?.username).join(', ')}</div></div></div>`;
 }
 
 function PlayerCard({ p, game, now, me, myPos, loc, onTag, onClose, busy }) {
