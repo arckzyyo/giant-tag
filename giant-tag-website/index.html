@@ -1684,6 +1684,28 @@ function PlayView({ id, g }) {
   const [disputesOpen, setDisputesOpen] = useState(false);
   const [busy, setBusy] = useState(null);
 
+  // "Tag who?": when IT has more than one runner in reach, nobody is auto-tagged and IT picks
+  const [choices, setChoices] = useState([]);
+  const snoozeUntil = useRef(0);
+  const canChoose = game?.status === 'active' && game?.mode !== 'team' && !!me?.is_it && !me?.is_eliminated && !isFrozen(me);
+  useEffect(() => {
+    if (!canChoose) { setChoices([]); return; }
+    let alive = true;
+    const check = async () => {
+      if (Date.now() < snoozeUntil.current) return;
+      const { data } = await supabase.rpc('nearby_targets', { g: game.id });
+      if (alive) setChoices(Array.isArray(data) ? data : []);
+    };
+    check();
+    const t = setInterval(check, 2000);
+    return () => { alive = false; clearInterval(t); };
+  }, [game?.id, canChoose]);
+  const prevChoiceCount = useRef(0);
+  useEffect(() => {
+    if (choices.length >= 2 && prevChoiceCount.current < 2) vibrate([0, 150, 80, 150]);
+    prevChoiceCount.current = choices.length;
+  }, [choices.length]);
+
   // server clock nudges (idempotent)
   useEffect(() => {
     if (!game || !['countdown', 'active'].includes(game.status)) return;
@@ -1912,6 +1934,19 @@ function PlayView({ id, g }) {
           <div class="grow"><b>${p.profile?.username}</b><div class="small">${viaPing ? (isFinite(d) ? `~${formatDistance(d)} at this ping` : 'Hidden until the next ping') : `${safe ? '🛡️ In a safe zone' : inRange ? 'In range' : 'Too far'} · ${formatDistance(d)}`}</div></div>
           <span style="font-size:22px">${inRange && !safe ? '✋' : '·'}</span></div>`;
       })}
+    <//>
+
+    <${Modal} open=${choices.length >= 2} borderColor=${C.it}>
+      <div class="big-sub" style="text-align:center;font-size:30px">TAG WHO?</div>
+      <div class="muted" style="text-align:center;margin:4px 0 14px">${choices.length} players are right next to you</div>
+      ${choices.map((c) => html`<div class="list-row tap" style=${{ borderColor: C.it, background: '#2a1a20' }}
+          onClick=${() => busy !== 'tag' && run('tag', async () => { await rpc('request_tag', { g: game.id, target: c.user_id }); setChoices([]); }, `Tagged ${c.username}!`)}>
+        <${Avatar} profile=${g.profileOf(c.user_id) || c} size=${44} />
+        <div class="grow"><b>${c.username}</b><div class="small">${c.distance} m away</div></div>
+        <span style="font-size:22px">✋</span></div>`)}
+      <${Button} variant="it" big title="🎲 RANDOM" loading=${busy === 'tag'} style="margin-top:6px"
+        onClick=${() => { const c = choices[Math.floor(Math.random() * choices.length)]; run('tag', async () => { await rpc('request_tag', { g: game.id, target: c.user_id }); setChoices([]); }, `Tagged ${c.username}!`); }} />
+      <${Button} variant="ghost" title="Not now" style="margin-top:6px" onClick=${() => { snoozeUntil.current = Date.now() + 8000; setChoices([]); }} />
     <//>
 
     <${Modal} open=${!!incoming} borderColor=${C.it}>
