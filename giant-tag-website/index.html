@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
-<meta name="theme-color" content="#121418" />
+<meta name="theme-color" content="#430107" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -17,10 +17,11 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <style>
 :root {
-  --bg: #121418; --bg-deep: #0b0c0f; --card: #1c1f26; --card2: #252a33; --border: #2e3440;
-  --text: #fff; --muted: #9aa3b2; --faint: #5b6474;
-  --it: #ff2d55; --it-glow: rgba(255,45,85,.35); --player: #3b82f6; --me: #22c55e; --gray: #6b7280;
-  --boundary: #facc15; --safe: #2dd4bf; --warning: #f59e0b; --danger: #ef4444; --success: #22c55e;
+  /* Palette: Midnight Cherry #430107 · Powder White #FFEEEE · Amber Yellow #FECD00 */
+  --bg: #430107; --bg-deep: #2B0004; --card: #570A12; --card2: #69121B; --border: #832430;
+  --text: #FFEEEE; --muted: #E7BFBF; --faint: #BC8E8E; --on-amber: #430107;
+  --it: #FECD00; --it-glow: rgba(254,205,0,.38); --player: #3B82F6; --me: #22C55E; --gray: #8F7476;
+  --boundary: #FECD00; --safe: #2DD4BF; --warning: #F59E0B; --danger: #FF5A5F; --success: #22C55E;
   --st: env(safe-area-inset-top, 0px); --sb: env(safe-area-inset-bottom, 0px);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -50,7 +51,7 @@ a { color: var(--player); }
 .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .logo { display: flex; flex-direction: column; align-items: center; line-height: 1; font-weight: 900; font-style: italic; }
-.logo .a { font-size: 64px; text-shadow: 0 0 18px var(--player); }
+.logo .a { font-size: 64px; color: var(--text); text-shadow: 0 0 18px rgba(255,238,238,.35); }
 .logo .b { font-size: 80px; color: var(--it); margin-top: -8px; text-shadow: 0 0 24px var(--it-glow); }
 
 .header { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
@@ -62,8 +63,8 @@ a { color: var(--player); }
 .btn:active { transform: scale(.97); }
 .btn:disabled { opacity: .45; }
 .btn.big { padding: 18px; font-size: 19px; border-radius: 22px; }
-.btn.primary { background: var(--player); color: #fff; }
-.btn.it { background: var(--it); color: #fff; box-shadow: 0 6px 24px var(--it-glow); }
+.btn.primary { background: var(--text); color: var(--bg); }
+.btn.it { background: var(--it); color: var(--on-amber); box-shadow: 0 6px 24px var(--it-glow); }
 .btn.success { background: var(--success); color: #04130a; }
 .btn.secondary { background: var(--card2); border: 1.5px solid var(--border); }
 .btn.danger { border: 1.5px solid var(--danger); color: var(--danger); }
@@ -77,7 +78,7 @@ a { color: var(--player); }
 .label { color: var(--muted); font-size: 13px; font-weight: 700; margin-bottom: 6px; display: block; }
 .input { width: 100%; background: var(--card2); color: var(--text); border: 1px solid var(--border); border-radius: 14px;
   padding: 13px 14px; font-size: 16px; outline: none; }
-.input:focus { border-color: var(--player); }
+.input:focus { border-color: var(--it); }
 .field { margin-bottom: 14px; }
 
 .seg { display: flex; background: var(--card2); border-radius: 14px; padding: 4px; gap: 4px; }
@@ -91,8 +92,8 @@ a { color: var(--player); }
 .stepper button { width: 32px; height: 32px; border-radius: 16px; background: var(--card2); font-size: 18px; font-weight: 700; }
 .stepper .v { min-width: 70px; text-align: center; font-weight: 800; }
 .switch { width: 50px; height: 30px; border-radius: 15px; background: var(--border); position: relative; transition: background .2s; flex-shrink: 0; }
-.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 12px; background: #fff; transition: left .2s; }
-.switch.on { background: var(--player); }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 12px; background: var(--text); transition: left .2s; }
+.switch.on { background: var(--it); }
 .switch.on::after { left: 23px; }
 
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 800;
@@ -108,7 +109,7 @@ a { color: var(--player); }
 
 .mode { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; background: var(--card);
   border: 1.5px solid var(--border); text-align: left; width: 100%; }
-.mode.on { border-color: var(--it); background: #2a1a20; }
+.mode.on { border-color: var(--it); background: var(--card2); }
 .radio { width: 20px; height: 20px; border-radius: 10px; border: 2px solid var(--faint); flex-shrink: 0; }
 .mode.on .radio { border-color: var(--it); background: var(--it); }
 
@@ -116,7 +117,7 @@ a { color: var(--player); }
 .grid-pick button { width: 56px; height: 56px; border-radius: 16px; background: var(--card); font-size: 26px; border: 2px solid transparent; }
 .grid-pick button.on { border-color: var(--it); background: var(--card2); }
 .swatch { width: 44px !important; height: 44px !important; border-radius: 22px !important; border: 3px solid transparent !important; }
-.swatch.on { border-color: #fff !important; }
+.swatch.on { border-color: var(--text) !important; }
 
 .code-box { text-align: center; background: var(--card); border: 2px dashed var(--it); border-radius: 22px; padding: 16px; margin: 16px 0; }
 .code-big { font-size: 44px; font-weight: 900; letter-spacing: 10px; margin-top: 4px; }
@@ -133,8 +134,8 @@ a { color: var(--player); }
 .toast { pointer-events: auto; display: flex; gap: 12px; align-items: center; padding: 14px; border-radius: 16px; background: var(--card2);
   box-shadow: 0 6px 24px rgba(0,0,0,.5); animation: drop .25s ease-out; }
 .toast .t { font-weight: 800; font-size: 15px; } .toast .b { font-size: 13px; opacity: .88; margin-top: 2px; }
-.toast.it { background: var(--it); } .toast.it .t { font-size: 18px; }
-.toast.danger { background: #7f1d1d; } .toast.success { background: #14532d; } .toast.warning { background: #78350f; }
+.toast.it { background: var(--it); color: var(--on-amber); } .toast.it .t { font-size: 18px; }
+.toast.danger { background: #8E1420; } .toast.success { background: #14532d; } .toast.warning { background: #7A4A00; }
 @keyframes drop { from { transform: translateY(-20px); opacity: 0; } to { transform: none; opacity: 1; } }
 
 /* Modals & sheets */
@@ -147,23 +148,23 @@ a { color: var(--player); }
 @keyframes up { from { transform: translateY(40px); opacity: .5; } to { transform: none; opacity: 1; } }
 
 /* Map screens */
-.map { position: absolute; inset: 0; background: #1d2027; }
-.leaflet-container { background: #1d2027; font-family: inherit; }
+.map { position: absolute; inset: 0; background: var(--bg-deep); }
+.leaflet-container { background: var(--bg-deep); font-family: inherit; }
 .leaflet-control-attribution { background: rgba(0,0,0,.5) !important; color: #888 !important; font-size: 9px !important; }
 .leaflet-control-attribution a { color: #aaa !important; }
 .leaflet-div-icon { background: none; border: 0; }
 .hud-top { position: absolute; left: 10px; right: 10px; top: calc(var(--st) + 6px); z-index: 1000; display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
 .hud-top > * { pointer-events: auto; }
-.glass { background: rgba(18,20,24,.93); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+.glass { background: rgba(67,1,7,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 .pills { display: flex; flex-wrap: wrap; gap: 6px; }
-.pills .pill { background: rgba(18,20,24,.93); }
+.pills .pill { background: rgba(67,1,7,.92); }
 
-.it-banner { display: flex; align-items: center; gap: 10px; background: var(--it); border-radius: 22px; padding: 10px 12px;
-  border: 2px solid rgba(255,255,255,.25); box-shadow: 0 4px 24px var(--it-glow); }
-.it-banner.me { border: 3px solid #fff; animation: throb 1.2s infinite; }
+.it-banner { display: flex; align-items: center; gap: 10px; background: var(--it); color: var(--on-amber); border-radius: 22px; padding: 10px 12px;
+  border: 2px solid rgba(67,1,7,.25); box-shadow: 0 4px 24px var(--it-glow); }
+.it-banner.me { border: 3px solid var(--text); animation: throb 1.2s infinite; }
 .it-banner .l { font-size: 11px; font-weight: 900; letter-spacing: 1.5px; opacity: .85; }
 .it-banner .n { font-size: 22px; font-weight: 900; font-style: italic; }
-.it-badge { background: #fff; color: var(--it); font-weight: 900; font-style: italic; border-radius: 8px; padding: 2px 8px; font-size: 14px; }
+.it-badge { background: var(--bg); color: var(--it); font-weight: 900; font-style: italic; border-radius: 8px; padding: 2px 8px; font-size: 14px; }
 @keyframes throb { 50% { box-shadow: 0 0 40px var(--it); } }
 
 .banner { border-radius: 16px; padding: 12px; }
@@ -171,7 +172,7 @@ a { color: var(--player); }
 
 .overlay { position: absolute; inset: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: rgba(0,0,0,.35); pointer-events: none; }
-.big-count { font-size: 120px; font-weight: 900; font-style: italic; text-shadow: 0 0 30px var(--it); line-height: 1; }
+.big-count { font-size: 120px; font-weight: 900; font-style: italic; color: var(--it); text-shadow: 0 0 30px var(--it-glow); line-height: 1; }
 .big-sub { font-size: 22px; font-weight: 900; font-style: italic; }
 
 .hud-bottom { position: absolute; left: 10px; right: 10px; bottom: calc(var(--sb) + 12px); z-index: 1000; pointer-events: none; }
@@ -179,14 +180,14 @@ a { color: var(--player); }
 .side-btns { display: flex; flex-direction: column; gap: 10px; align-items: flex-end; margin-bottom: 10px; pointer-events: none; }
 .side-btns > * { pointer-events: auto; }
 .round { width: 48px; height: 48px; border-radius: 24px; display: grid; place-items: center; font-size: 20px; border: 1px solid var(--border); }
-.round.on { background: var(--me); color: #000; }
+.round.on { background: var(--it); color: var(--on-amber); }
 .bar { display: flex; align-items: center; justify-content: space-between; border-radius: 32px; padding: 0 20px; height: 72px; border: 1px solid var(--border); }
 .bar-btn { width: 70px; display: flex; flex-direction: column; align-items: center; font-size: 22px; }
 .bar-btn span { font-size: 11px; color: var(--muted); font-weight: 700; margin-top: 2px; }
-.tag-btn { width: 92px; height: 92px; border-radius: 46px; background: var(--it); margin-top: -36px; border: 4px solid var(--bg);
+.tag-btn { width: 92px; height: 92px; border-radius: 46px; background: var(--it); color: var(--on-amber); margin-top: -36px; border: 4px solid var(--bg);
   font-size: 24px; font-weight: 900; font-style: italic; box-shadow: 0 0 24px var(--it); display: grid; place-items: center; }
 .tag-btn:active { transform: scale(.94); }
-.tag-btn.off { background: var(--card2); box-shadow: none; font-size: 18px; }
+.tag-btn.off { background: var(--card2); color: var(--text); box-shadow: none; font-size: 18px; }
 
 .pcard { position: absolute; left: 10px; right: 10px; z-index: 1100; background: var(--card); border: 1px solid var(--border); border-radius: 22px; padding: 16px; }
 
@@ -196,16 +197,16 @@ a { color: var(--player); }
 .pm-dim { opacity: .45; }
 .pm .pulse { position: absolute; width: 44px; height: 44px; border-radius: 50%; background: var(--it); animation: pulse 1.4s ease-out infinite; z-index: 1; }
 @keyframes pulse { from { transform: scale(.8); opacity: .7; } to { transform: scale(2.3); opacity: 0; } }
-.pm-badge { position: absolute; bottom: 2px; z-index: 3; background: var(--it); color: #fff; font-weight: 900; font-style: italic; font-size: 10px;
-  padding: 1px 6px; border-radius: 6px; border: 1.5px solid #fff; }
-.pm-name { position: absolute; top: 58px; z-index: 3; font-size: 11px; font-weight: 800; white-space: nowrap; text-shadow: 0 1px 3px #000, 0 0 2px #000; }
+.pm-badge { position: absolute; bottom: 2px; z-index: 3; background: var(--it); color: var(--on-amber); font-weight: 900; font-style: italic; font-size: 10px;
+  padding: 1px 6px; border-radius: 6px; border: 1.5px solid var(--bg); }
+.pm-name { position: absolute; top: 58px; z-index: 3; font-size: 11px; font-weight: 800; color: var(--text); white-space: nowrap; text-shadow: 0 1px 3px var(--bg-deep), 0 0 2px var(--bg-deep); }
 .pm-frozen { position: absolute; top: 2px; right: 6px; z-index: 3; font-size: 16px; }
 
-.vertex { width: 26px; height: 26px; border-radius: 13px; background: var(--boundary); border: 2px solid #000; color: #000; font-weight: 900;
+.vertex { width: 26px; height: 26px; border-radius: 13px; background: var(--boundary); border: 2px solid var(--on-amber); color: var(--on-amber); font-weight: 900;
   font-size: 11px; display: grid; place-items: center; }
-.vertex.sel { background: #fff; transform: scale(1.25); }
+.vertex.sel { background: var(--text); transform: scale(1.25); }
 .safe-mk { width: 30px; height: 30px; border-radius: 15px; background: var(--bg-deep); border: 2px solid var(--safe); display: grid; place-items: center; font-size: 14px; }
-.safe-mk.sel { border-color: #fff; }
+.safe-mk.sel { border-color: var(--text); }
 
 .search { display: flex; align-items: center; gap: 8px; border-radius: 999px; padding: 0 14px; height: 46px; border: 1px solid var(--border); flex: 1; }
 .search input { flex: 1; background: none; border: 0; color: var(--text); font-size: 16px; outline: none; min-width: 0; }
@@ -214,8 +215,8 @@ a { color: var(--player); }
   border-top: 1px solid var(--border); max-width: 560px; margin: 0 auto; }
 .mode-row { display: flex; gap: 8px; margin-bottom: 12px; }
 .mode-row button { flex: 1; padding: 10px; border-radius: 14px; background: var(--card2); font-weight: 800; }
-.mode-row button.b-on { background: var(--boundary); color: #000; }
-.mode-row button.s-on { background: var(--safe); color: #000; }
+.mode-row button.b-on { background: var(--boundary); color: var(--on-amber); }
+.mode-row button.s-on { background: var(--safe); color: var(--on-amber); }
 
 .mini-map { height: 170px; border-radius: 22px; overflow: hidden; margin-top: 16px; border: 1px solid var(--border); position: relative; }
 .mini-map .map { pointer-events: none; }
@@ -225,13 +226,13 @@ a { color: var(--player); }
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
 
-.a2hs { background: linear-gradient(135deg, #1e3a8a, #312e81); border-radius: 18px; padding: 14px; margin-top: 18px; }
+.a2hs { background: linear-gradient(135deg, #69121B, #832430); border: 1px solid var(--it); border-radius: 18px; padding: 14px; margin-top: 18px; }
 
-.ping-ring { position: absolute; width: 40px; height: 40px; border-radius: 50%; border: 3px solid #7dd3fc; animation: ping 1.2s ease-out 2; z-index: 1; }
+.ping-ring { position: absolute; width: 40px; height: 40px; border-radius: 50%; border: 3px solid var(--text); animation: ping 1.2s ease-out 2; z-index: 1; }
 @keyframes ping { from { transform: scale(.8); opacity: 1; } to { transform: scale(2.6); opacity: 0; } }
 .pm.ping-fade { animation: pingfade 10s linear forwards; }
 @keyframes pingfade { 0%, 55% { opacity: 1; } 100% { opacity: 0; } }
-.tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.5); }
+.tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.8) contrast(.9) sepia(.6) hue-rotate(-45deg) saturate(1.8); }
 
 </style>
 <script src="config.js"></script>
@@ -359,8 +360,9 @@ const TEAM_INFO = { alpha: { name: 'Team Blaze', color: '#F97316' }, bravo: { na
 const AVATAR_EMOJIS = ['🏃', '🦊', '🐺', '🦖', '🐸', '🐯', '🦄', '🐙', '👻', '🤖', '🥷', '🧙', '🦸', '🐼', '🐵', '🔥'];
 const AVATAR_COLORS = ['#3B82F6', '#22C55E', '#F97316', '#A855F7', '#EC4899', '#14B8A6', '#EAB308', '#64748B'];
 const C = {
-  it: '#FF2D55', player: '#3B82F6', me: '#22C55E', gray: '#6B7280', boundary: '#FACC15', safe: '#2DD4BF',
-  warning: '#F59E0B', danger: '#EF4444', success: '#22C55E', card2: '#252A33', muted: '#9AA3B2',
+  it: '#FECD00', player: '#3B82F6', me: '#22C55E', gray: '#8F7476', boundary: '#FECD00', safe: '#2DD4BF',
+  warning: '#F59E0B', danger: '#FF5A5F', success: '#22C55E', card2: '#69121B', muted: '#E7BFBF',
+  cherry: '#430107', powder: '#FFEEEE', amber: '#FECD00',
 };
 
 const DEFAULT_SETTINGS = {
@@ -701,7 +703,7 @@ function useLeafletMap(ref, { center, zoom = 15, bounds, interactive = true } = 
 
 function avatarHtml(profile, size) {
   const url = safeUrl(profile?.avatar_url);
-  const bg = /^#[0-9a-f]{3,8}$/i.test(profile?.avatar_color || '') ? profile.avatar_color : '#252A33';
+  const bg = /^#[0-9a-f]{3,8}$/i.test(profile?.avatar_color || '') ? profile.avatar_color : '#69121B';
   const inner = url ? `<img src="${esc(url)}" />` : `<span style="font-size:${size * 0.5}px">${esc(profile?.avatar_emoji || '🏃')}</span>`;
   return `<div class="avatar" style="width:${size}px;height:${size}px;background:${bg}">${inner}</div>`;
 }
@@ -789,7 +791,7 @@ const Pill = ({ children, color, text, style }) =>
 function Avatar({ profile, size = 44, ring, dim, style }) {
   const url = safeUrl(profile?.avatar_url);
   return html`<div class="avatar" style=${{
-    width: size + 'px', height: size + 'px', background: profile?.avatar_color || '#252A33',
+    width: size + 'px', height: size + 'px', background: profile?.avatar_color || '#69121B',
     border: ring ? `${Math.max(2, Math.round(size * 0.07))}px solid ${ring}` : 'none', opacity: dim ? 0.45 : 1, ...(style || {}),
   }}>${url ? html`<img src=${url} />` : html`<span style=${{ fontSize: size * 0.5 + 'px' }}>${profile?.avatar_emoji || '🏃'}</span>`}</div>`;
 }
@@ -996,7 +998,7 @@ function GameRow({ row }) {
     <div class="grow"><div class="h2 ellipsis">${g.name}</div>
       <div class="small">${MODE_INFO[g.mode].title} · ${new Date(g.created_at).toLocaleDateString()}${g.location_name ? ' · ' + g.location_name : ''}</div></div>
     ${g.status === 'finished'
-      ? row.is_winner ? html`<${Pill} color=${C.boundary} text="#000">🏆 WON<//>` : row.final_rank ? html`<${Pill}>#${row.final_rank}<//>` : null
+      ? row.is_winner ? html`<${Pill} color=${C.boundary} text=${C.cherry}>🏆 WON<//>` : row.final_rank ? html`<${Pill}>#${row.final_rank}<//>` : null
       : html`<${Pill} color=${g.status === 'lobby' ? C.player : C.it}>${g.status === 'lobby' ? 'IN LOBBY' : 'LIVE'}<//>`}
   </div>`;
 }
@@ -1154,7 +1156,7 @@ function BoundaryEditor({ gameId }) {
     const g = layers.current; g.clearLayers();
     if (points.length >= 3) L.polygon(points.map(toLL), { color: tooBig ? C.danger : C.boundary, weight: 4, fillOpacity: 0.1, interactive: false }).addTo(g);
     else if (points.length === 2) L.polyline(points.map(toLL), { color: C.boundary, weight: 4, interactive: false }).addTo(g);
-    if (maxR != null && centre && points.length >= 3) L.circle(toLL(centre), { radius: maxR, color: '#fff', weight: 1.5, opacity: 0.4, dashArray: '8 8', fill: false, interactive: false }).addTo(g);
+    if (maxR != null && centre && points.length >= 3) L.circle(toLL(centre), { radius: maxR, color: C.powder, weight: 1.5, opacity: 0.5, dashArray: '8 8', fill: false, interactive: false }).addTo(g);
     points.forEach((p, i) => {
       const m = L.marker(toLL(p), { draggable: true, icon: L.divIcon({ className: '', html: `<div class="vertex ${sel === i ? 'sel' : ''}">${i + 1}</div>`, iconSize: [26, 26], iconAnchor: [13, 13] }) }).addTo(g);
       m.on('click', (e) => { L.DomEvent.stopPropagation(e); setSel(i); setSelZone(null); });
@@ -1396,14 +1398,14 @@ function Lobby({ id }) {
     <${Button} variant="secondary" icon="📤" title="Invite friends" onClick=${share} />
     ${game.boundary.length >= 3 && html`<${MiniMap} game=${game} />`}
 
-    <${Section} right=${html`<${Pill} color=${canStart ? C.success : C.card2} text=${canStart ? '#000' : '#fff'}>${ready}/${players.length} ready<//>`}>Players · ${players.length}/${game.max_players}<//>
+    <${Section} right=${html`<${Pill} color=${canStart ? C.amber : C.card2} text=${canStart ? C.cherry : C.powder}>${ready}/${players.length} ready<//>`}>Players · ${players.length}/${game.max_players}<//>
     ${players.map((p) => {
       const r = p.is_ready || p.user_id === game.host_id;
       return html`<div class="list-row tap" onClick=${() => isHost && p.user_id !== profile.id && setMenuFor(p)}>
         <${Avatar} profile=${p.profile} size=${42} ring=${p.user_id === profile?.id ? C.me : null} />
         <div class="grow"><b>${p.profile?.username}${p.user_id === profile?.id ? ' (you)' : ''}</b>
           <div class="small">${p.user_id === game.host_id ? '👑 Host' : 'Player'}${game.starting_it_id === p.user_id ? ' · 🔴 Starts as IT' : ''}</div></div>
-        <${Pill} color=${r ? C.success : C.card2} text=${r ? '#000' : C.muted}>${r ? 'READY' : 'NOT READY'}<//>
+        <${Pill} color=${r ? C.amber : C.card2} text=${r ? C.cherry : C.muted}>${r ? 'READY' : 'NOT READY'}<//>
       </div>`;
     })}
     ${spectators.length > 0 && html`<div class="small mt8">👀 Spectators: ${spectators.map((s) => s.profile?.username).join(', ')}</div>`}
@@ -1424,7 +1426,7 @@ function Lobby({ id }) {
     <//>
 
     <div class="gap12 mt24">
-      ${me?.role === 'player' && !isHost && html`<${Button} big variant=${me.is_ready ? 'secondary' : 'success'} icon=${me.is_ready ? '✋' : '✅'}
+      ${me?.role === 'player' && !isHost && html`<${Button} big variant=${me.is_ready ? 'secondary' : 'it'} icon=${me.is_ready ? '✋' : '✅'}
         title=${me.is_ready ? "I'M NOT READY" : "I'M READY"} loading=${busy === 'ready'} onClick=${toggleReady} />`}
       ${isHost && html`
         <${Button} big variant="it" icon="▶" title="START GAME" disabled=${!canStart} loading=${busy === 'start'}
@@ -1535,7 +1537,7 @@ function Results({ id }) {
       <div style="color:var(--it);font-size:18px;font-weight:900;font-style:italic;letter-spacing:4px">GAME OVER</div>
       <div style="font-size:64px;margin-top:8px">🏆</div>
       <h1 class="h1">${title}</h1>
-      ${me?.is_winner && html`<${Pill} color=${C.boundary} text="#000" style=${{ marginTop: '8px' }}>YOU WON!<//>`}
+      ${me?.is_winner && html`<${Pill} color=${C.boundary} text=${C.cherry} style=${{ marginTop: '8px' }}>YOU WON!<//>`}
       <div class="row mt16">${winners.slice(0, 5).map((w, i) => html`<${Avatar} profile=${w.profile} size=${56} ring=${C.boundary} style=${{ marginLeft: i ? '-22px' : 0 }} />`)}</div>
       <p class="muted">${MODE_INFO[game.mode].emoji} ${game.name}</p>
     </div>
@@ -1876,15 +1878,15 @@ function PlayView({ id, g }) {
     <div class="hud-top">
       <${ItBanner} game=${game} its=${its} meId=${profile?.id} players=${active} />
       <div class="pills">
-        <span class="pill" style="font-variant-numeric:tabular-nums">⏱ ${timer}</span>
+        <span class="pill" style="font-variant-numeric:tabular-nums;color:var(--it)">⏱ ${timer}</span>
         <span class="pill">👥 ${remaining} ${game.mode === 'classic' || game.mode === 'team' ? 'playing' : 'left'}</span>
         ${sharingEnabled
           ? html`<span class="pill" style=${{ color: gpsColor }}><span class="dot" style=${{ background: gpsColor }}></span>
               ${sharing.permission === 'denied' ? 'NO GPS' : fixAge > 30 ? 'GPS LOST' : `LIVE ±${acc != null ? Math.round(acc) : '?'}m`}</span>`
           : html`<span class="pill">${me?.role === 'spectator' ? '👀 SPECTATING' : 'NOT SHARING'}</span>`}
-        ${nextPing != null && html`<span class="pill" style=${{ color: '#7dd3fc' }}>📡 Next ping ${formatClock(nextPing)}</span>`}
-        ${!g.connected && html`<span class="pill" style="background:var(--warning);color:#000">RECONNECTING…</span>`}
-        ${sharing.offline && g.connected && html`<span class="pill" style="background:var(--warning);color:#000">OFFLINE</span>`}
+        ${nextPing != null && html`<span class="pill" style=${{ color: C.amber }}>📡 Next ping ${formatClock(nextPing)}</span>`}
+        ${!g.connected && html`<span class="pill" style="background:var(--warning);color:var(--on-amber)">RECONNECTING…</span>`}
+        ${sharing.offline && g.connected && html`<span class="pill" style="background:var(--warning);color:var(--on-amber)">OFFLINE</span>`}
       </div>
       ${sharing.permission === 'denied' && html`<div class="banner" style="background:var(--danger)"><div class="t">Location is off</div>
         <div class="b">iPhone: Settings → Privacy & Security → Location Services → Safari Websites → While Using, then reload.</div></div>`}
@@ -1897,7 +1899,7 @@ function PlayView({ id, g }) {
       ${me?.is_eliminated && html`<div class="banner" style="background:var(--card2)"><div class="t">💀 You're out</div><div class="b">Keep watching the map${game.allow_rejoin ? ' — you can rejoin from the menu after 2 minutes' : ''}.</div></div>`}
       ${outgoing && html`<div class="banner glass row"><div class="b grow">⏳ Waiting for ${g.profileOf(outgoing.target_id)?.username} to confirm your tag…</div>
         <button style="color:var(--muted);font-weight:700" onClick=${() => run('c', () => rpc('cancel_tag', { request: outgoing.id }))}>Cancel</button></div>`}
-      ${disputes.length > 0 && html`<div class="banner" style="background:var(--warning);color:#000" onClick=${() => setDisputesOpen(true)}>
+      ${disputes.length > 0 && html`<div class="banner" style="background:var(--warning);color:var(--on-amber)" onClick=${() => setDisputesOpen(true)}>
         <div class="t">⚖️ ${disputes.length} disputed tag${disputes.length > 1 ? 's' : ''}</div><div class="b">Tap to decide.</div></div>`}
     </div>
 
@@ -1929,7 +1931,7 @@ function PlayView({ id, g }) {
         const loc = locOf(p);
         const allowed = game.tag_radius_m + Math.min((acc || 0) + (loc?.accuracy || 0), game.tag_radius_m);
         const inRange = !viaPing && d <= allowed, safe = !viaPing && loc && inSafeZone(loc, game.safe_zones);
-        return html`<div class="list-row tap" style=${inRange && !safe ? { borderColor: C.it, background: '#2a1a20' } : null} onClick=${() => busy !== 'tag' && requestTag(p)}>
+        return html`<div class="list-row tap" style=${inRange && !safe ? { borderColor: C.it, background: '#69121B' } : null} onClick=${() => busy !== 'tag' && requestTag(p)}>
           <${Avatar} profile=${p.profile} size=${44} />
           <div class="grow"><b>${p.profile?.username}</b><div class="small">${viaPing ? (isFinite(d) ? `~${formatDistance(d)} at this ping` : 'Hidden until the next ping') : `${safe ? '🛡️ In a safe zone' : inRange ? 'In range' : 'Too far'} · ${formatDistance(d)}`}</div></div>
           <span style="font-size:22px">${inRange && !safe ? '✋' : '·'}</span></div>`;
@@ -1939,7 +1941,7 @@ function PlayView({ id, g }) {
     <${Modal} open=${choices.length >= 2} borderColor=${C.it}>
       <div class="big-sub" style="text-align:center;font-size:30px">TAG WHO?</div>
       <div class="muted" style="text-align:center;margin:4px 0 14px">${choices.length} players are right next to you</div>
-      ${choices.map((c) => html`<div class="list-row tap" style=${{ borderColor: C.it, background: '#2a1a20' }}
+      ${choices.map((c) => html`<div class="list-row tap" style=${{ borderColor: C.it, background: '#69121B' }}
           onClick=${() => busy !== 'tag' && run('tag', async () => { await rpc('request_tag', { g: game.id, target: c.user_id }); setChoices([]); }, `Tagged ${c.username}!`)}>
         <${Avatar} profile=${g.profileOf(c.user_id) || c} size=${44} />
         <div class="grow"><b>${c.username}</b><div class="small">${c.distance} m away</div></div>
@@ -2003,12 +2005,12 @@ function ItBanner({ game, its, meId, players }) {
   if (its.length === 1) {
     const p = its[0];
     return html`<div class=${`it-banner ${meIt ? 'me' : ''}`}>
-      <${Avatar} profile=${p.profile} size=${34} ring="#fff" />
+      <${Avatar} profile=${p.profile} size=${34} ring=${C.cherry} />
       <div class="grow"><div class="l">CURRENTLY IT</div><div class="n ellipsis">${meIt ? "YOU'RE IT!" : p.profile?.username}</div></div>
       <span class="it-badge">IT</span></div>`;
   }
   return html`<div class=${`it-banner ${meIt ? 'me' : ''}`}>
-    <div class="row" style="gap:0">${its.slice(0, 4).map((p, i) => html`<${Avatar} profile=${p.profile} size=${30} ring="#fff" style=${{ marginLeft: i ? '-10px' : 0 }} />`)}</div>
+    <div class="row" style="gap:0">${its.slice(0, 4).map((p, i) => html`<${Avatar} profile=${p.profile} size=${30} ring=${C.cherry} style=${{ marginLeft: i ? '-10px' : 0 }} />`)}</div>
     <div class="grow"><div class="l">${meIt ? "YOU'RE ON THE IT TEAM" : `IT TEAM · ${its.length}`}</div><div class="n ellipsis" style="font-size:18px">${its.map((p) => p.profile?.username).join(', ')}</div></div></div>`;
 }
 
